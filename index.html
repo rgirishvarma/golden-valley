@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Golden Valley | Rayachoty</title>
+<title>Golden Valley | Premium Plots in Rayachoty</title>
 
 <style>
 *{
@@ -19,7 +19,7 @@ background:#fff;
 color:#333;
 }
 
-/* NAV */
+/* NAVBAR */
 nav{
 position:fixed;
 top:0;
@@ -33,7 +33,7 @@ z-index:1000;
 }
 
 .logo{
-height:45px;
+height:50px;
 }
 
 nav a{
@@ -41,6 +41,15 @@ color:#fff;
 text-decoration:none;
 margin-left:20px;
 font-size:15px;
+}
+
+.brochure-btn{
+background:#ffcc00;
+color:#000;
+padding:8px 18px;
+border-radius:20px;
+font-weight:bold;
+margin-left:15px;
 }
 
 /* HERO */
@@ -57,7 +66,7 @@ padding:20px;
 }
 
 .hero h2{
-font-size:48px;
+font-size:50px;
 margin-bottom:20px;
 }
 
@@ -99,7 +108,7 @@ grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
 gap:20px;
 }
 
-/* CARDS */
+/* CARD */
 .card{
 background:#f4f4f4;
 padding:25px;
@@ -163,7 +172,7 @@ color:#ffcc00;
 margin-bottom:20px;
 }
 
-/* ENQUIRY FORM */
+/* FORM */
 form{
 max-width:600px;
 margin:auto;
@@ -215,9 +224,9 @@ document.getElementById("popup").style.display="none";
 function sendToWhatsApp(){
 let name = document.getElementById("name").value;
 let phone = document.getElementById("phone").value;
-let plot = document.getElementById("plot").value;
+let action = document.getElementById("action").value;
 
-let message = `Hello, I am interested in Golden Valley.%0A%0AName: ${name}%0APhone: ${phone}%0APlot Requirement: ${plot}`;
+let message = `Hello, I am interested in Golden Valley.%0A%0AName: ${name}%0APhone: ${phone}%0ARequirement: ${action}`;
 
 window.open(`https://wa.me/919912799455?text=${message}`, '_blank');
 }
@@ -235,29 +244,26 @@ window.open(`https://wa.me/919912799455?text=${message}`, '_blank');
 <a href="#gallery">Gallery</a>
 <a href="#booking">Book</a>
 <a href="#enquiry">Enquiry</a>
+<a href="brochure.pdf" download class="brochure-btn">Download Brochure</a>
 </div>
 </nav>
 
 <!-- HERO -->
 <div class="hero">
 <h2>Golden Valley</h2>
-<p>Premium Plots | 7 Acres Layout | EMI from ₹10,000</p>
-<a class="btn" 
-href="https://wa.me/919912799455?text=Hi%20I%20am%20interested%20in%20Golden%20Valley%20plots" 
-target="_blank">
-Enquire on WhatsApp
-</a>
+<p>Premium 7 Acres Layout | EMI from ₹10,000</p>
+<a class="btn" href="#enquiry">Enquire Now</a>
 </div>
 
 <!-- OVERVIEW -->
 <section id="overview">
 <h2>Project Overview</h2>
 <p>
-Premium 7-acre plotted development with clear approvals and 
-flexible EMI starting from ₹10,000 per month.
+Premium plotted development with clear approvals, wide roads, 
+temple, park, and flexible EMI options.
 </p>
 <p style="margin-top:15px;font-weight:bold;color:#b30000;">
-Limited Availability – Book Now!
+Limited Availability – Secure Your Plot Today!
 </p>
 </section>
 
@@ -297,35 +303,28 @@ Limited Availability – Book Now!
 <section id="booking">
 <div class="booking">
 <h2>Book Your Plot Today</h2>
-<p>Secure your future investment with easy EMI options.</p>
-<a class="btn" 
-href="https://wa.me/919912799455?text=I%20want%20to%20book%20a%20plot%20in%20Golden%20Valley" 
-target="_blank">
-Book via WhatsApp
-</a>
+<p>Secure your investment with easy EMI options.</p>
+<a class="btn" href="#enquiry">Book Now</a>
 </div>
 </section>
 
-<!-- ENQUIRY FORM -->
+<!-- ENQUIRY -->
 <section id="enquiry">
 <h2>Enquiry Form</h2>
 <form onsubmit="event.preventDefault(); sendToWhatsApp();">
 <input type="text" id="name" placeholder="Your Name" required>
 <input type="tel" id="phone" placeholder="Your Phone Number" required>
-<select id="plot">
+<select id="action">
 <option value="Investment Plot">Investment Plot</option>
 <option value="Residential Plot">Residential Plot</option>
+<option value="Site Visit">Site Visit</option>
 </select>
 <button class="btn" type="submit">Submit Enquiry</button>
 </form>
 </section>
 
 <!-- FLOATING WHATSAPP -->
-<a class="whatsapp-float" 
-href="https://wa.me/919912799455" 
-target="_blank">
-💬
-</a>
+<a class="whatsapp-float" href="https://wa.me/919912799455" target="_blank">💬</a>
 
 <footer>
 © 2026 Golden Valley | All Rights Reserved
