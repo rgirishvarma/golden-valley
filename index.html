@@ -69,31 +69,22 @@ header h1{font-size:42px;margin-top:10px;}
     cursor:pointer;
     transition:0.4s;
 }
-.gallery-grid img:hover{
-    transform:scale(1.05);
-}
+.gallery-grid img:hover{transform:scale(1.05);}
 
 /* POPUP */
 #popup{
-    display:none;
-    position:fixed;
-    top:0;left:0;
+    display:none;position:fixed;top:0;left:0;
     width:100%;height:100%;
     background:rgba(0,0,0,0.9);
-    justify-content:center;
-    align-items:center;
+    justify-content:center;align-items:center;
     z-index:9999;
 }
-#popup img, #popup video{
-    max-width:90%;
-    max-height:90%;
+#popup img,#popup video{
+    max-width:90%;max-height:90%;
 }
 #popup span{
-    position:absolute;
-    top:20px;right:40px;
-    font-size:40px;
-    cursor:pointer;
-    color:white;
+    position:absolute;top:20px;right:40px;
+    font-size:40px;cursor:pointer;color:white;
 }
 
 /* AMENITIES */
@@ -115,10 +106,41 @@ header h1{font-size:42px;margin-top:10px;}
     transform:translateY(-10px);
     box-shadow:0 0 25px rgba(255,215,0,0.3);
 }
-.card img{
-    width:100%;height:200px;object-fit:cover;
-}
+.card img{width:100%;height:200px;object-fit:cover;}
 .card h3{padding:15px;}
+
+/* MAP SECTION */
+.map-section{
+    padding:80px 20px;
+    text-align:center;
+}
+.map-container{
+    width:90%;
+    max-width:1100px;
+    margin:30px auto;
+    border-radius:12px;
+    overflow:hidden;
+    border:2px solid gold;
+    box-shadow:0 0 25px rgba(255,215,0,0.3);
+}
+.map-container iframe{
+    width:100%;
+    height:450px;
+    border:0;
+}
+.directions-btn{
+    display:inline-block;
+    margin-top:20px;
+    padding:12px 30px;
+    border:1px solid gold;
+    color:gold;
+    text-decoration:none;
+    transition:0.4s;
+}
+.directions-btn:hover{
+    background:gold;
+    color:black;
+}
 
 /* BOOKING */
 .booking{padding:80px 20px;text-align:center;}
@@ -198,23 +220,29 @@ footer{text-align:center;padding:20px;color:#ccc;}
 <section class="amenities">
     <h2 class="gold">Luxury Amenities</h2>
     <div class="grid">
-        <div class="card">
-            <img src="images/pool.jpg">
-            <h3>Swimming Pool</h3>
-        </div>
-        <div class="card">
-            <img src="images/park.jpg">
-            <h3>Park & Walking Area</h3>
-        </div>
-        <div class="card">
-            <img src="images/clubhouse.jpg">
-            <h3>Club House</h3>
-        </div>
-        <div class="card">
-            <img src="images/playarea.jpg">
-            <h3>Children Play Area</h3>
-        </div>
+        <div class="card"><img src="images/pool.jpg"><h3>Swimming Pool</h3></div>
+        <div class="card"><img src="images/park.jpg"><h3>Park & Walking Area</h3></div>
+        <div class="card"><img src="images/clubhouse.jpg"><h3>Club House</h3></div>
+        <div class="card"><img src="images/playarea.jpg"><h3>Children Play Area</h3></div>
     </div>
+</section>
+
+<section class="map-section">
+    <h2 class="gold">Get Directions</h2>
+    <div class="map-container">
+        <iframe 
+        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771263873864!5m2!1sen!2sin"
+        allowfullscreen=""
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade">
+        </iframe>
+    </div>
+
+    <a class="directions-btn" 
+       href="https://www.google.com/maps/dir/?api=1&destination=Golden+Valley+Rayachoty"
+       target="_blank">
+       Open in Google Maps
+    </a>
 </section>
 
 <section class="booking">
@@ -236,15 +264,12 @@ footer{text-align:center;padding:20px;color:#ccc;}
 </footer>
 
 <script>
-
-/* LOADER */
 window.onload=function(){
     setTimeout(function(){
         document.getElementById("loader").style.display="none";
     },2000);
 }
 
-/* COUNTER */
 const counters=document.querySelectorAll('[data-target]');
 counters.forEach(counter=>{
     const updateCount=()=>{
@@ -254,29 +279,23 @@ counters.forEach(counter=>{
         if(count<target){
             counter.innerText=Math.ceil(count+increment);
             setTimeout(updateCount,10);
-        }else{
-            counter.innerText=target;
-        }
+        }else{counter.innerText=target;}
     };
     updateCount();
 });
 
-/* POPUP IMAGE */
 function openPopup(src){
     document.getElementById("popup").style.display="flex";
-    document.getElementById("popup-content").innerHTML=
-        `<img src="${src}">`;
+    document.getElementById("popup-content").innerHTML=`<img src="${src}">`;
 }
 function openVideo(src){
     document.getElementById("popup").style.display="flex";
-    document.getElementById("popup-content").innerHTML=
-        `<video src="${src}" controls autoplay></video>`;
+    document.getElementById("popup-content").innerHTML=`<video src="${src}" controls autoplay></video>`;
 }
 function closePopup(){
     document.getElementById("popup").style.display="none";
 }
 
-/* WHATSAPP ENQUIRY */
 document.getElementById("bookingForm").addEventListener("submit",function(e){
     e.preventDefault();
     var name=document.getElementById("name").value;
