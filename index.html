@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Golden Valley | Premium Plots in Rayachoty</title>
+<title>Golden Valley | Premium Plots</title>
 
 <style>
 *{
@@ -15,20 +15,22 @@ scroll-behavior:smooth;
 }
 
 body{
-background:#fff;
-color:#333;
+background:linear-gradient(135deg,#f5f7fa,#e8f1ec);
+color:#222;
 }
 
-/* NAVBAR */
-nav{
+/* ===== GLASS NAVBAR ===== */
+.glass-nav{
 position:fixed;
 top:0;
 width:100%;
-background:#0b3d2e;
-padding:12px 40px;
+padding:15px 40px;
 display:flex;
 justify-content:space-between;
 align-items:center;
+background:rgba(11,61,46,0.85);
+backdrop-filter:blur(10px);
+box-shadow:0 4px 20px rgba(0,0,0,0.15);
 z-index:1000;
 }
 
@@ -36,7 +38,7 @@ z-index:1000;
 height:50px;
 }
 
-nav a{
+.nav-links a{
 color:#fff;
 text-decoration:none;
 margin-left:20px;
@@ -45,46 +47,54 @@ font-size:15px;
 
 .brochure-btn{
 background:#ffcc00;
-color:#000;
+color:#000 !important;
 padding:8px 18px;
-border-radius:20px;
+border-radius:25px;
 font-weight:bold;
 margin-left:15px;
 }
 
-/* HERO */
-.hero{
-height:100vh;
-background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('images/slide1.jpg') center/cover no-repeat;
-display:flex;
-flex-direction:column;
-justify-content:center;
-align-items:center;
-text-align:center;
+/* LIMITED BADGE */
+.limited-badge{
+position:absolute;
+top:75px;
+right:40px;
+background:#b30000;
 color:#fff;
-padding:20px;
+padding:8px 18px;
+border-radius:25px;
+font-weight:bold;
+animation:pulse 1.5s infinite;
 }
 
-.hero h2{
-font-size:50px;
+/* HERO CLEAN */
+.hero{
+padding-top:140px;
+padding-bottom:100px;
+text-align:center;
+}
+
+.hero h1{
+font-size:48px;
+color:#0b3d2e;
 margin-bottom:20px;
 }
 
 .hero p{
 font-size:20px;
-margin-bottom:25px;
+margin-bottom:30px;
 }
 
+/* BUTTON */
 .btn{
 padding:14px 32px;
-background:#ffcc00;
-color:#000;
+background:#0b3d2e;
+color:#fff;
 border:none;
 border-radius:30px;
 cursor:pointer;
-font-weight:bold;
 text-decoration:none;
-display:inline-block;
+font-weight:bold;
 }
 
 /* SECTIONS */
@@ -108,12 +118,11 @@ grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
 gap:20px;
 }
 
-/* CARD */
 .card{
-background:#f4f4f4;
+background:#fff;
 padding:25px;
-border-radius:12px;
-box-shadow:0 5px 15px rgba(0,0,0,0.05);
+border-radius:15px;
+box-shadow:0 5px 20px rgba(0,0,0,0.08);
 }
 
 /* GALLERY */
@@ -121,13 +130,13 @@ box-shadow:0 5px 15px rgba(0,0,0,0.05);
 width:100%;
 height:220px;
 object-fit:cover;
-border-radius:10px;
+border-radius:12px;
 cursor:pointer;
 }
 
 .video{
 width:100%;
-border-radius:10px;
+border-radius:12px;
 }
 
 /* POPUP */
@@ -150,26 +159,12 @@ max-height:90%;
 border-radius:10px;
 }
 
-.popup span{
-position:absolute;
-top:20px;
-right:40px;
-font-size:30px;
-color:#fff;
-cursor:pointer;
-}
-
 /* BOOKING */
 .booking{
 background:#0b3d2e;
 color:#fff;
 padding:70px 20px;
-border-radius:15px;
-}
-
-.booking h2{
-color:#ffcc00;
-margin-bottom:20px;
+border-radius:20px;
 }
 
 /* FORM */
@@ -205,6 +200,33 @@ text-decoration:none;
 z-index:1000;
 box-shadow:0 4px 10px rgba(0,0,0,0.3);
 }
+
+/* EMI BADGE */
+.emi-badge{
+position:fixed;
+left:20px;
+bottom:20px;
+background:#ffcc00;
+color:#000;
+padding:12px 20px;
+border-radius:30px;
+font-weight:bold;
+animation:blink 1s infinite;
+z-index:1000;
+}
+
+/* Animations */
+@keyframes blink{
+0%{opacity:1;}
+50%{opacity:0.3;}
+100%{opacity:1;}
+}
+
+@keyframes pulse{
+0%{transform:scale(1);}
+50%{transform:scale(1.05);}
+100%{transform:scale(1);}
+}
 </style>
 
 <script>
@@ -236,9 +258,9 @@ window.open(`https://wa.me/919912799455?text=${message}`, '_blank');
 <body>
 
 <!-- NAV -->
-<nav>
+<nav class="glass-nav">
 <img src="images/hero.jpg" class="logo">
-<div>
+<div class="nav-links">
 <a href="#overview">Overview</a>
 <a href="#amenities">Amenities</a>
 <a href="#gallery">Gallery</a>
@@ -246,13 +268,14 @@ window.open(`https://wa.me/919912799455?text=${message}`, '_blank');
 <a href="#enquiry">Enquiry</a>
 <a href="brochure.pdf" download class="brochure-btn">Download Brochure</a>
 </div>
+<div class="limited-badge">🔴 Limited Plots Left</div>
 </nav>
 
 <!-- HERO -->
 <div class="hero">
-<h2>Golden Valley</h2>
-<p>Premium 7 Acres Layout | EMI from ₹10,000</p>
-<a class="btn" href="#enquiry">Enquire Now</a>
+<h1>Golden Valley</h1>
+<p>Premium 7 Acre Layout | EMI Starts @ ₹10,000</p>
+<a href="#enquiry" class="btn">Enquire Now</a>
 </div>
 
 <!-- OVERVIEW -->
@@ -260,10 +283,7 @@ window.open(`https://wa.me/919912799455?text=${message}`, '_blank');
 <h2>Project Overview</h2>
 <p>
 Premium plotted development with clear approvals, wide roads, 
-temple, park, and flexible EMI options.
-</p>
-<p style="margin-top:15px;font-weight:bold;color:#b30000;">
-Limited Availability – Secure Your Plot Today!
+temple, park and structured layout planning.
 </p>
 </section>
 
@@ -295,7 +315,6 @@ Limited Availability – Secure Your Plot Today!
 </section>
 
 <div id="popup" class="popup" onclick="closePopup()">
-<span onclick="closePopup()">✖</span>
 <img id="popup-img">
 </div>
 
@@ -303,8 +322,8 @@ Limited Availability – Secure Your Plot Today!
 <section id="booking">
 <div class="booking">
 <h2>Book Your Plot Today</h2>
-<p>Secure your investment with easy EMI options.</p>
-<a class="btn" href="#enquiry">Book Now</a>
+<p>Limited availability. Secure your investment now.</p>
+<a href="#enquiry" class="btn">Book Now</a>
 </div>
 </section>
 
@@ -326,7 +345,12 @@ Limited Availability – Secure Your Plot Today!
 <!-- FLOATING WHATSAPP -->
 <a class="whatsapp-float" href="https://wa.me/919912799455" target="_blank">💬</a>
 
-<footer>
+<!-- EMI BADGE -->
+<div class="emi-badge">
+💰 EMI Starts @ ₹10,000 / Month
+</div>
+
+<footer style="text-align:center;padding:20px;margin-top:40px;">
 © 2026 Golden Valley | All Rights Reserved
 </footer>
 
