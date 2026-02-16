@@ -3,143 +3,116 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Golden Valley | Premium Plots</title>
+<title>Golden Valley | Rayachoty</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
-*{
+
+body{
 margin:0;
-padding:0;
-box-sizing:border-box;
-font-family:'Segoe UI',sans-serif;
+font-family:'Poppins',sans-serif;
+background:linear-gradient(135deg,#111,#1b1b1b,#2a1f0f);
+color:#fff;
 scroll-behavior:smooth;
 }
 
-body{
-background:linear-gradient(135deg,#f5f7fa,#e8f1ec);
-color:#222;
-}
-
-/* ===== GLASS NAVBAR ===== */
-.glass-nav{
+/* Loader */
+#loader{
 position:fixed;
-top:0;
 width:100%;
-padding:15px 40px;
+height:100vh;
+background:#000;
 display:flex;
-justify-content:space-between;
+justify-content:center;
 align-items:center;
-background:rgba(11,61,46,0.85);
-backdrop-filter:blur(10px);
-box-shadow:0 4px 20px rgba(0,0,0,0.15);
-z-index:1000;
+z-index:9999;
+}
+.loader-text{
+font-family:'Playfair Display',serif;
+font-size:28px;
+color:gold;
+animation:blink 1.5s infinite;
+}
+@keyframes blink{
+0%,100%{opacity:1;}
+50%{opacity:0.3;}
 }
 
-.logo{
-height:50px;
+/* Gold Text */
+.gold{
+color:gold;
+font-family:'Playfair Display',serif;
 }
 
-.nav-links a{
-color:#fff;
-text-decoration:none;
-margin-left:20px;
-font-size:15px;
-}
-
-.brochure-btn{
-background:#ffcc00;
-color:#000 !important;
-padding:8px 18px;
-border-radius:25px;
-font-weight:bold;
-margin-left:15px;
-}
-
-/* LIMITED BADGE */
-.limited-badge{
-position:absolute;
-top:75px;
-right:40px;
-background:#b30000;
-color:#fff;
-padding:8px 18px;
-border-radius:25px;
-font-weight:bold;
-animation:pulse 1.5s infinite;
-}
-
-/* HERO CLEAN */
+/* Hero */
 .hero{
-padding-top:140px;
-padding-bottom:100px;
+height:100vh;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
 text-align:center;
+padding:20px;
+background:radial-gradient(circle at center,#2c2c2c,#111);
 }
 
-.hero h1{
-font-size:48px;
-color:#0b3d2e;
+.hero img{
+width:160px;
 margin-bottom:20px;
 }
 
-.hero p{
-font-size:20px;
-margin-bottom:30px;
-}
-
-/* BUTTON */
 .btn{
-padding:14px 32px;
-background:#0b3d2e;
-color:#fff;
+background:gold;
+color:#000;
+padding:12px 25px;
 border:none;
 border-radius:30px;
-cursor:pointer;
 text-decoration:none;
-font-weight:bold;
+font-weight:600;
+margin:10px;
+display:inline-block;
 }
 
-/* SECTIONS */
-section{
-padding:80px 20px;
-max-width:1200px;
-margin:auto;
+/* Counter */
+.counter{
+display:flex;
+justify-content:center;
+gap:40px;
+padding:60px 20px;
+flex-wrap:wrap;
+}
+.counter div{
 text-align:center;
 }
-
-section h2{
-font-size:32px;
-margin-bottom:30px;
-color:#0b3d2e;
+.counter h2{
+font-size:40px;
+color:gold;
+margin:0;
 }
 
-/* GRID */
-.grid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+/* Gallery */
+.gallery{
+padding:60px 20px;
+text-align:center;
+}
+.gallery-container{
+display:flex;
 gap:20px;
+justify-content:center;
+flex-wrap:wrap;
 }
-
-.card{
-background:#fff;
-padding:25px;
-border-radius:15px;
-box-shadow:0 5px 20px rgba(0,0,0,0.08);
-}
-
-/* GALLERY */
-.gallery img{
-width:100%;
-height:220px;
-object-fit:cover;
-border-radius:12px;
+.gallery-container img{
+width:280px;
+border-radius:10px;
 cursor:pointer;
+transition:0.4s;
+}
+.gallery-container img:hover{
+transform:scale(1.05);
 }
 
-.video{
-width:100%;
-border-radius:12px;
-}
-
-/* POPUP */
+/* Popup */
 .popup{
 display:none;
 position:fixed;
@@ -147,212 +120,184 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,0.8);
+background:rgba(0,0,0,0.9);
 justify-content:center;
 align-items:center;
-z-index:2000;
+z-index:10000;
 }
-
 .popup img{
 max-width:90%;
 max-height:90%;
 border-radius:10px;
 }
 
-/* BOOKING */
+/* Amenities */
+.amenities{
+padding:60px 20px;
+text-align:center;
+}
+.amenities-list{
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+gap:20px;
+}
+.amenities-list div{
+background:#1c1c1c;
+padding:20px;
+border-radius:10px;
+border:1px solid rgba(255,215,0,0.3);
+width:200px;
+}
+
+/* Map */
+.map-section{
+padding:60px 20px;
+text-align:center;
+}
+.map-box{
+width:90%;
+max-width:1000px;
+margin:20px auto;
+border-radius:12px;
+overflow:hidden;
+border:1px solid rgba(255,215,0,0.4);
+}
+
+/* Booking */
 .booking{
-background:#0b3d2e;
-color:#fff;
-padding:70px 20px;
-border-radius:20px;
+padding:60px 20px;
+text-align:center;
 }
 
-/* FORM */
-form{
-max-width:600px;
-margin:auto;
-text-align:left;
-}
-
-form input, form select{
-width:100%;
-padding:12px;
-margin-bottom:15px;
-border-radius:8px;
-border:1px solid #ccc;
-}
-
-form button{
-width:100%;
-}
-
-/* FLOATING WHATSAPP */
-.whatsapp-float{
+/* WhatsApp */
+.whatsapp{
 position:fixed;
 bottom:20px;
 right:20px;
 background:#25D366;
 color:#fff;
-padding:15px 18px;
-border-radius:50%;
-font-size:24px;
+padding:15px 20px;
+border-radius:50px;
 text-decoration:none;
-z-index:1000;
-box-shadow:0 4px 10px rgba(0,0,0,0.3);
-}
-
-/* EMI BADGE */
-.emi-badge{
-position:fixed;
-left:20px;
-bottom:20px;
-background:#ffcc00;
-color:#000;
-padding:12px 20px;
-border-radius:30px;
 font-weight:bold;
-animation:blink 1s infinite;
-z-index:1000;
 }
 
-/* Animations */
-@keyframes blink{
-0%{opacity:1;}
-50%{opacity:0.3;}
-100%{opacity:1;}
+/* Footer */
+footer{
+text-align:center;
+padding:30px;
+background:#000;
 }
 
-@keyframes pulse{
-0%{transform:scale(1);}
-50%{transform:scale(1.05);}
-100%{transform:scale(1);}
-}
 </style>
-
-<script>
-window.onload = function() {
-  window.scrollTo(0,0);
-};
-
-function openPopup(src){
-document.getElementById("popup-img").src = src;
-document.getElementById("popup").style.display="flex";
-}
-
-function closePopup(){
-document.getElementById("popup").style.display="none";
-}
-
-function sendToWhatsApp(){
-let name = document.getElementById("name").value;
-let phone = document.getElementById("phone").value;
-let action = document.getElementById("action").value;
-
-let message = `Hello, I am interested in Golden Valley.%0A%0AName: ${name}%0APhone: ${phone}%0ARequirement: ${action}`;
-
-window.open(`https://wa.me/919912799455?text=${message}`, '_blank');
-}
-</script>
-
 </head>
 <body>
 
-<!-- NAV -->
-<nav class="glass-nav">
-<img src="images/hero.jpg" class="logo">
-<div class="nav-links">
-<a href="#overview">Overview</a>
-<a href="#amenities">Amenities</a>
-<a href="#gallery">Gallery</a>
-<a href="#booking">Book</a>
-<a href="#enquiry">Enquiry</a>
-<a href="brochure.pdf" download class="brochure-btn">Download Brochure</a>
+<div id="loader">
+<div class="loader-text">GOLDEN VALLEY</div>
 </div>
-<div class="limited-badge">🔴 Limited Plots Left</div>
-</nav>
 
 <!-- HERO -->
-<div class="hero">
-<h1>Golden Valley</h1>
-<p>Premium 7 Acre Layout | EMI Starts @ ₹10,000</p>
-<a href="#enquiry" class="btn">Enquire Now</a>
-</div>
+<section class="hero">
+<img src="images/hero.jpg" alt="Golden Valley">
+<h1 class="gold">GOLDEN VALLEY – Rayachoty</h1>
+<p>Not a scheme. Not an offer. Your Future Address.</p>
 
-<!-- OVERVIEW -->
-<section id="overview">
-<h2>Project Overview</h2>
-<p>
-Premium plotted development with clear approvals, wide roads, 
-temple, park and structured layout planning.
-</p>
+<a href="brochure.pdf" class="btn" download>Download Brochure</a>
+<a href="#booking" class="btn">Book Now</a>
 </section>
 
-<!-- AMENITIES -->
-<section id="amenities">
-<h2>Premium Amenities</h2>
-<div class="grid">
-<div class="card">🛣️ 40 & 30 Feet Roads</div>
-<div class="card">💡 Street Lights</div>
-<div class="card">🌳 Avenue Plantation</div>
-<div class="card">🚰 Water Facility</div>
-<div class="card">🏞️ Children Park</div>
-<div class="card">🛕 Temple</div>
-<div class="card">🔐 Secure Layout</div>
+<!-- COUNTER -->
+<section class="counter">
+<div>
+<h2 id="plots">0</h2>
+<p>Plots</p>
+</div>
+<div>
+<h2 id="acres">0</h2>
+<p>Acres</p>
+</div>
+<div>
+<h2 id="emi">0</h2>
+<p>EMI Starting</p>
 </div>
 </section>
 
 <!-- GALLERY -->
-<section id="gallery">
-<h2>Project Gallery</h2>
-<div class="grid gallery">
+<section class="gallery">
+<h2 class="gold">Project Gallery</h2>
+<div class="gallery-container">
 <img src="images/slide1.jpg" onclick="openPopup(this.src)">
 <img src="images/slide2.jpg" onclick="openPopup(this.src)">
 <img src="images/slide3.jpg" onclick="openPopup(this.src)">
-<video class="video" controls>
-<source src="images/reel.mp4" type="video/mp4">
-</video>
 </div>
 </section>
 
-<div id="popup" class="popup" onclick="closePopup()">
+<div class="popup" id="popup" onclick="closePopup()">
 <img id="popup-img">
 </div>
 
+<!-- AMENITIES -->
+<section class="amenities">
+<h2 class="gold">Luxury Amenities</h2>
+<div class="amenities-list">
+<div>🏊 Swimming Pool</div>
+<div>🏠 Club House</div>
+<div>🌳 Park Area</div>
+<div>🚸 Kids Play Zone</div>
+<div>🛣️ 40ft Roads</div>
+<div>🔐 Gated Community</div>
+</div>
+</section>
+
+<!-- MAP -->
+<section class="map-section">
+<h2 class="gold">Project Location</h2>
+<div class="map-box">
+<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771263873864!5m2!1sen!2sin" 
+width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy">
+</iframe>
+</div>
+<br>
+<a href="https://www.google.com/maps/dir/?api=1&destination=Golden+Valley+Rayachoty" target="_blank" class="btn">Get Directions</a>
+</section>
+
 <!-- BOOKING -->
-<section id="booking">
-<div class="booking">
-<h2>Book Your Plot Today</h2>
-<p>Limited availability. Secure your investment now.</p>
-<a href="#enquiry" class="btn">Book Now</a>
-</div>
+<section class="booking" id="booking">
+<h2 class="gold">Book Your Plot</h2>
+<p>EMI Starts at ₹10,000 / Month</p>
+<a href="https://wa.me/916303531088?text=I%20am%20interested%20in%20Golden%20Valley%20Rayachoty" class="btn">Enquire on WhatsApp</a>
 </section>
 
-<!-- ENQUIRY -->
-<section id="enquiry">
-<h2>Enquiry Form</h2>
-<form onsubmit="event.preventDefault(); sendToWhatsApp();">
-<input type="text" id="name" placeholder="Your Name" required>
-<input type="tel" id="phone" placeholder="Your Phone Number" required>
-<select id="action">
-<option value="Investment Plot">Investment Plot</option>
-<option value="Residential Plot">Residential Plot</option>
-<option value="Site Visit">Site Visit</option>
-</select>
-<button class="btn" type="submit">Submit Enquiry</button>
-</form>
-</section>
-
-<!-- FLOATING WHATSAPP -->
-<a class="whatsapp-float" href="https://wa.me/919912799455" target="_blank">💬</a>
-
-<!-- EMI BADGE -->
-<div class="emi-badge">
-💰 EMI Starts @ ₹10,000 / Month
-</div>
-
-<footer style="text-align:center;padding:20px;margin-top:40px;">
-© 2026 Golden Valley | All Rights Reserved
+<footer>
+<p>Golden Valley | Rayachoty</p>
 </footer>
+
+<a href="https://wa.me/916303531088?text=I%20want%20details%20about%20Golden%20Valley" class="whatsapp">Chat</a>
+
+<script>
+window.onload=function(){
+document.getElementById("loader").style.display="none";
+
+let plots=95, acres=7, emi=10000;
+
+let count=setInterval(()=>{
+if(plots>0){document.getElementById("plots").innerText=95-plots; plots--;}
+if(acres>0){document.getElementById("acres").innerText=7-acres; acres--;}
+if(emi>0){document.getElementById("emi").innerText="₹"+(10000-emi); emi-=500;}
+if(plots<=0 && acres<=0 && emi<=0){clearInterval(count);}
+},30);
+}
+
+function openPopup(src){
+document.getElementById("popup").style.display="flex";
+document.getElementById("popup-img").src=src;
+}
+function closePopup(){
+document.getElementById("popup").style.display="none";
+}
+</script>
 
 </body>
 </html>
