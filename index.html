@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
+
 body{
 margin:0;
 font-family:'Poppins',sans-serif;
@@ -169,7 +170,7 @@ padding:60px 20px;
 text-align:center;
 }
 
-/* WhatsApp */
+/* WhatsApp Floating */
 .whatsapp{
 position:fixed;
 bottom:20px;
@@ -182,11 +183,13 @@ text-decoration:none;
 font-weight:bold;
 }
 
+/* Footer */
 footer{
 text-align:center;
 padding:30px;
 background:#000;
 }
+
 </style>
 </head>
 <body>
@@ -230,7 +233,6 @@ background:#000;
 <img src="images/slide2.jpg" onclick="openPopup(this.src,'image')">
 <img src="images/slide3.jpg" onclick="openPopup(this.src,'image')">
 
-<!-- Video Reel -->
 <video onclick="openPopup('images/reel.mp4','video')" muted>
 <source src="images/reel.mp4" type="video/mp4">
 </video>
@@ -279,20 +281,29 @@ Enquire on WhatsApp
 </a>
 </section>
 
-
 <footer>
 <p>Golden Valley | Rayachoty | 📞 6303531088</p>
 </footer>
 
-<a href="https://wa.me/916303531088?text=I%20want%20details%20about%20Golden%20Valley" class="whatsapp">Chat</a>
+<a href="https://wa.me/916303531088?text=I%20want%20details%20about%20Golden%20Valley" class="whatsapp">
+Chat
+</a>
 
 <script>
-window.onload=function(){
+
+/* Always reload from top */
+if ('scrollRestoration' in history) {
+history.scrollRestoration = 'manual';
+}
+
+window.onload = function(){
+window.scrollTo(0,0);
 document.getElementById("loader").style.display="none";
+
 animateCounter("plots",95,"");
 animateCounter("acres",7,"");
 animateCounter("emi",10000,"₹");
-}
+};
 
 function animateCounter(id,target,prefix){
 let count=0;
@@ -324,8 +335,8 @@ function closePopup(){
 document.getElementById("popup").style.display="none";
 document.getElementById("popup-content").innerHTML="";
 }
+
 </script>
 
 </body>
 </html>
-
