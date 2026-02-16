@@ -10,18 +10,13 @@
 margin:0;
 padding:0;
 box-sizing:border-box;
-font-family: 'Segoe UI', sans-serif;
+font-family:'Segoe UI',sans-serif;
 scroll-behavior:smooth;
 }
 
 body{
-background:#ffffff;
+background:#fff;
 color:#333;
-}
-
-/* Reload from top */
-window.onbeforeunload = function () {
-  window.scrollTo(0, 0);
 }
 
 /* NAV */
@@ -52,7 +47,7 @@ font-size:15px;
 /* HERO */
 .hero{
 height:100vh;
-background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('hero.jpg') center/cover no-repeat;
+background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('images/hero.jpg') center/cover no-repeat;
 display:flex;
 flex-direction:column;
 justify-content:center;
@@ -63,7 +58,7 @@ padding:20px;
 }
 
 .hero h2{
-font-size:48px;
+font-size:50px;
 margin-bottom:20px;
 }
 
@@ -73,7 +68,7 @@ margin-bottom:25px;
 }
 
 .btn{
-padding:12px 30px;
+padding:14px 32px;
 background:#ffcc00;
 color:#000;
 border:none;
@@ -81,9 +76,10 @@ border-radius:30px;
 cursor:pointer;
 font-weight:bold;
 text-decoration:none;
+display:inline-block;
 }
 
-/* SECTION */
+/* SECTIONS */
 section{
 padding:80px 20px;
 max-width:1200px;
@@ -97,23 +93,25 @@ margin-bottom:30px;
 color:#0b3d2e;
 }
 
-/* AMENITIES */
+/* GRID */
 .grid{
 display:grid;
 grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
 gap:20px;
 }
 
+/* CARDS */
 .card{
 background:#f4f4f4;
-padding:20px;
-border-radius:10px;
+padding:25px;
+border-radius:12px;
+box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
 
 /* GALLERY */
 .gallery img{
 width:100%;
-height:200px;
+height:220px;
 object-fit:cover;
 border-radius:10px;
 cursor:pointer;
@@ -151,6 +149,25 @@ right:40px;
 font-size:30px;
 color:#fff;
 cursor:pointer;
+}
+
+/* BOOKING SECTION */
+.booking{
+background:#0b3d2e;
+color:#fff;
+padding:70px 20px;
+border-radius:15px;
+margin-top:40px;
+}
+
+.booking h2{
+color:#ffcc00;
+margin-bottom:20px;
+}
+
+.booking p{
+font-size:18px;
+margin-bottom:25px;
 }
 
 /* MAP */
@@ -196,7 +213,7 @@ document.getElementById("popup").style.display="none";
 <a href="#overview">Overview</a>
 <a href="#amenities">Amenities</a>
 <a href="#gallery">Gallery</a>
-<a href="#developer">Developer</a>
+<a href="#booking">Book Now</a>
 <a href="#contact">Contact</a>
 </div>
 </nav>
@@ -204,8 +221,10 @@ document.getElementById("popup").style.display="none";
 <!-- HERO -->
 <div class="hero">
 <h2>Golden Valley</h2>
-<p>Premium Plots in Rayachoty | 7 Acres Layout | EMI from ₹10,000</p>
-<a class="btn" href="https://wa.me/919912799455?text=Hi%20I%20am%20interested%20in%20Golden%20Valley%20plots" target="_blank">
+<p>Premium Plots | 7 Acres Layout | EMI from ₹10,000</p>
+<a class="btn" 
+href="https://wa.me/919912799455?text=Hi%20I%20am%20interested%20in%20Golden%20Valley%20plots" 
+target="_blank">
 Enquire on WhatsApp
 </a>
 </div>
@@ -214,13 +233,13 @@ Enquire on WhatsApp
 <section id="overview">
 <h2>Project Overview</h2>
 <p>
-Golden Valley is a premium 7-acre plotted development designed for 
-peaceful living and high-return investment. Located in Rayachoty, 
-this venture offers clear approvals, structured layout planning, 
-and flexible EMI options starting from ₹10,000 per month.
+Golden Valley is a premium 7-acre plotted development designed 
+for peaceful living and high-return investment. 
+Flexible EMI options starting from ₹10,000 per month.
 </p>
-<br>
-<p><strong>Limited Availability – Book Your Plot Today!</strong></p>
+<p style="margin-top:15px;font-weight:bold;color:#b30000;">
+Limited Availability – Secure Your Plot Today!
+</p>
 </section>
 
 <!-- AMENITIES -->
@@ -242,11 +261,11 @@ and flexible EMI options starting from ₹10,000 per month.
 <section id="gallery">
 <h2>Project Gallery</h2>
 <div class="grid gallery">
-<img src="slide1.jpg" onclick="openPopup(this.src)">
-<img src="slide2.jpg" onclick="openPopup(this.src)">
-<img src="slide3.jpg" onclick="openPopup(this.src)">
+<img src="images/slide1.jpg" onclick="openPopup(this.src)">
+<img src="images/slide2.jpg" onclick="openPopup(this.src)">
+<img src="images/slide3.jpg" onclick="openPopup(this.src)">
 <video class="video" controls>
-<source src="reel.mp4" type="video/mp4">
+<source src="images/reel.mp4" type="video/mp4">
 </video>
 </div>
 </section>
@@ -257,6 +276,22 @@ and flexible EMI options starting from ₹10,000 per month.
 <img id="popup-img">
 </div>
 
+<!-- BOOK YOUR PLOT -->
+<section id="booking">
+<div class="booking">
+<h2>Book Your Plot Today</h2>
+<p>
+Plots are available on limited basis. 
+Secure your future investment now with easy EMI options.
+</p>
+<a class="btn" 
+href="https://wa.me/919912799455?text=Hi%20I%20want%20to%20book%20a%20plot%20in%20Golden%20Valley" 
+target="_blank">
+Book via WhatsApp
+</a>
+</div>
+</section>
+
 <!-- MAP -->
 <section>
 <h2>Location Map</h2>
@@ -265,28 +300,14 @@ src="https://www.google.com/maps?q=Rayachoty,Andhra+Pradesh&output=embed">
 </iframe>
 </section>
 
-<!-- BROCHURE -->
-<section>
-<h2>Download Brochure</h2>
-<a class="btn" href="brochure.pdf" download>Download PDF</a>
-</section>
-
-<!-- DEVELOPER -->
-<section id="developer">
-<h2>About The Developer</h2>
-<p>
-Golden Valley is developed by a trusted real estate team committed 
-to delivering legally approved, transparent, and premium plotted layouts. 
-Our vision is to create peaceful residential communities with strong appreciation potential.
-</p>
-</section>
-
 <!-- CONTACT -->
 <section id="contact">
 <h2>Contact Us</h2>
 <p>Rayachoty, Andhra Pradesh</p>
 <br>
-<a class="btn" href="https://wa.me/919912799455?text=Hi%20I%20want%20details%20about%20Golden%20Valley" target="_blank">
+<a class="btn" 
+href="https://wa.me/919912799455?text=Hi%20I%20want%20complete%20details%20about%20Golden%20Valley" 
+target="_blank">
 Chat on WhatsApp
 </a>
 </section>
