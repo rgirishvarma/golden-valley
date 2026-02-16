@@ -8,11 +8,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 
 <style>
-
 body{
 margin:0;
 font-family:'Poppins',sans-serif;
-background:linear-gradient(135deg,#111,#1b1b1b,#2a1f0f);
+background:linear-gradient(135deg,#141414,#1b1b1b,#2a1f0f);
 color:#fff;
 scroll-behavior:smooth;
 }
@@ -30,7 +29,7 @@ z-index:9999;
 }
 .loader-text{
 font-family:'Playfair Display',serif;
-font-size:28px;
+font-size:30px;
 color:gold;
 animation:blink 1.5s infinite;
 }
@@ -39,13 +38,11 @@ animation:blink 1.5s infinite;
 50%{opacity:0.3;}
 }
 
-/* Gold Text */
 .gold{
 color:gold;
 font-family:'Playfair Display',serif;
 }
 
-/* Hero */
 .hero{
 height:100vh;
 display:flex;
@@ -56,7 +53,6 @@ text-align:center;
 padding:20px;
 background:radial-gradient(circle at center,#2c2c2c,#111);
 }
-
 .hero img{
 width:160px;
 margin-bottom:20px;
@@ -78,7 +74,7 @@ display:inline-block;
 .counter{
 display:flex;
 justify-content:center;
-gap:40px;
+gap:60px;
 padding:60px 20px;
 flex-wrap:wrap;
 }
@@ -86,7 +82,7 @@ flex-wrap:wrap;
 text-align:center;
 }
 .counter h2{
-font-size:40px;
+font-size:48px;
 color:gold;
 margin:0;
 }
@@ -102,13 +98,15 @@ gap:20px;
 justify-content:center;
 flex-wrap:wrap;
 }
-.gallery-container img{
+.gallery-container img,
+.gallery-container video{
 width:280px;
-border-radius:10px;
+border-radius:12px;
 cursor:pointer;
 transition:0.4s;
 }
-.gallery-container img:hover{
+.gallery-container img:hover,
+.gallery-container video:hover{
 transform:scale(1.05);
 }
 
@@ -125,10 +123,11 @@ justify-content:center;
 align-items:center;
 z-index:10000;
 }
-.popup img{
+.popup img,
+.popup video{
 max-width:90%;
 max-height:90%;
-border-radius:10px;
+border-radius:12px;
 }
 
 /* Amenities */
@@ -183,13 +182,11 @@ text-decoration:none;
 font-weight:bold;
 }
 
-/* Footer */
 footer{
 text-align:center;
 padding:30px;
 background:#000;
 }
-
 </style>
 </head>
 <body>
@@ -202,7 +199,7 @@ background:#000;
 <section class="hero">
 <img src="images/hero.jpg" alt="Golden Valley">
 <h1 class="gold">GOLDEN VALLEY – Rayachoty</h1>
-<p>Not a scheme. Not an offer. Your Future Address.</p>
+<p>95 Premium Plots | 7 Acres | EMI Starts ₹10,000</p>
 
 <a href="brochure.pdf" class="btn" download>Download Brochure</a>
 <a href="#booking" class="btn">Book Now</a>
@@ -212,15 +209,15 @@ background:#000;
 <section class="counter">
 <div>
 <h2 id="plots">0</h2>
-<p>Plots</p>
+<p>Premium Plots</p>
 </div>
 <div>
 <h2 id="acres">0</h2>
-<p>Acres</p>
+<p>Total Acres</p>
 </div>
 <div>
 <h2 id="emi">0</h2>
-<p>EMI Starting</p>
+<p>Starting EMI</p>
 </div>
 </section>
 
@@ -228,14 +225,21 @@ background:#000;
 <section class="gallery">
 <h2 class="gold">Project Gallery</h2>
 <div class="gallery-container">
-<img src="images/slide1.jpg" onclick="openPopup(this.src)">
-<img src="images/slide2.jpg" onclick="openPopup(this.src)">
-<img src="images/slide3.jpg" onclick="openPopup(this.src)">
+
+<img src="images/slide1.jpg" onclick="openPopup(this.src,'image')">
+<img src="images/slide2.jpg" onclick="openPopup(this.src,'image')">
+<img src="images/slide3.jpg" onclick="openPopup(this.src,'image')">
+
+<!-- Video Reel -->
+<video onclick="openPopup('images/reel.mp4','video')" muted>
+<source src="images/reel.mp4" type="video/mp4">
+</video>
+
 </div>
 </section>
 
 <div class="popup" id="popup" onclick="closePopup()">
-<img id="popup-img">
+<div id="popup-content"></div>
 </div>
 
 <!-- AMENITIES -->
@@ -255,23 +259,28 @@ background:#000;
 <section class="map-section">
 <h2 class="gold">Project Location</h2>
 <div class="map-box">
-<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771263873864!5m2!1sen!2sin" 
+<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771263873864!5m2!1sen!2sin"
 width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy">
 </iframe>
 </div>
+
 <br>
-<a href="https://www.google.com/maps/dir/?api=1&destination=Golden+Valley+Rayachoty" target="_blank" class="btn">Get Directions</a>
+<a href="https://www.google.com/maps/dir/?api=1&destination=Golden+Valley+Rayachoty" target="_blank" class="btn">
+Get Directions
+</a>
 </section>
 
 <!-- BOOKING -->
 <section class="booking" id="booking">
-<h2 class="gold">Book Your Plot</h2>
-<p>EMI Starts at ₹10,000 / Month</p>
-<a href="https://wa.me/916303531088?text=I%20am%20interested%20in%20Golden%20Valley%20Rayachoty" class="btn">Enquire on WhatsApp</a>
+<h2 class="gold">Book Your Plot Today</h2>
+<p>Limited Availability – 95 Plots Only</p>
+<a href="https://wa.me/916303531088?text=I%20am%20interested%20in%20Golden%20Valley%20Rayachoty" class="btn">
+Enquire on WhatsApp
+</a>
 </section>
 
 <footer>
-<p>Golden Valley | Rayachoty</p>
+<p>Golden Valley | Rayachoty | 📞 6303531088</p>
 </footer>
 
 <a href="https://wa.me/916303531088?text=I%20want%20details%20about%20Golden%20Valley" class="whatsapp">Chat</a>
@@ -279,23 +288,40 @@ width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy">
 <script>
 window.onload=function(){
 document.getElementById("loader").style.display="none";
+animateCounter("plots",95,"");
+animateCounter("acres",7,"");
+animateCounter("emi",10000,"₹");
+}
 
-let plots=95, acres=7, emi=10000;
-
-let count=setInterval(()=>{
-if(plots>0){document.getElementById("plots").innerText=95-plots; plots--;}
-if(acres>0){document.getElementById("acres").innerText=7-acres; acres--;}
-if(emi>0){document.getElementById("emi").innerText="₹"+(10000-emi); emi-=500;}
-if(plots<=0 && acres<=0 && emi<=0){clearInterval(count);}
+function animateCounter(id,target,prefix){
+let count=0;
+let interval=setInterval(()=>{
+count+=Math.ceil(target/50);
+if(count>=target){
+count=target;
+clearInterval(interval);
+}
+document.getElementById(id).innerText=prefix+count;
 },30);
 }
 
-function openPopup(src){
-document.getElementById("popup").style.display="flex";
-document.getElementById("popup-img").src=src;
+function openPopup(src,type){
+let popup=document.getElementById("popup");
+let content=document.getElementById("popup-content");
+content.innerHTML="";
+
+if(type==="image"){
+content.innerHTML="<img src='"+src+"'>";
+}else{
+content.innerHTML="<video src='"+src+"' controls autoplay></video>";
 }
+
+popup.style.display="flex";
+}
+
 function closePopup(){
 document.getElementById("popup").style.display="none";
+document.getElementById("popup-content").innerHTML="";
 }
 </script>
 
