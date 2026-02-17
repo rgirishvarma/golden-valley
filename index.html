@@ -84,6 +84,7 @@ padding:8px 25px;
 border:1px solid #D4AF37;
 border-radius:30px;
 font-size:13px;
+display:inline-block;
 }
 
 .hero-buttons{margin-top:35px;}
@@ -151,7 +152,7 @@ color:#D4AF37;
 font-size:32px;
 }
 
-/* NEW HIGHLIGHTS */
+/* HIGHLIGHTS */
 .highlights-grid{
 display:flex;
 justify-content:center;
@@ -180,11 +181,6 @@ font-size:65px;
 color:#D4AF37;
 margin-bottom:10px;
 letter-spacing:2px;
-}
-
-.highlight-item p{
-font-size:14px;
-letter-spacing:1px;
 }
 
 /* GALLERY */
@@ -272,6 +268,29 @@ font-weight:600;
 cursor:pointer;
 }
 
+/* NEW BOOK SECTION */
+.book-section{
+background:#111;
+padding:100px 20px;
+text-align:center;
+border-top:1px solid rgba(212,175,55,0.3);
+border-bottom:1px solid rgba(212,175,55,0.3);
+}
+
+.book-section h2{
+font-family:'Cinzel',serif;
+color:#D4AF37;
+font-size:36px;
+margin-bottom:20px;
+}
+
+.quote{
+font-style:italic;
+color:#D4AF37;
+margin:20px 0 30px;
+font-size:18px;
+}
+
 footer{
 text-align:center;
 padding:25px;
@@ -281,7 +300,6 @@ border-top:1px solid rgba(212,175,55,0.3);
 </head>
 <body>
 
-<!-- NAVBAR -->
 <div class="navbar">
 <div class="logo">Golden Valley</div>
 <div class="nav-links">
@@ -292,7 +310,6 @@ border-top:1px solid rgba(212,175,55,0.3);
 </div>
 </div>
 
-<!-- HERO -->
 <section class="hero">
 <img src="images/hero.jpg" alt="Logo">
 <h1>Golden Valley</h1>
@@ -309,55 +326,29 @@ border-top:1px solid rgba(212,175,55,0.3);
 
 <div class="divider"></div>
 
-<!-- PROJECT HIGHLIGHTS -->
 <section class="section" id="about">
 <h2>Project Highlights</h2>
-
 <div class="highlights-grid">
-
-<div class="highlight-item">
-<h1>95</h1>
-<p>Premium Plots</p>
-</div>
-
-<div class="highlight-item">
-<h1>7</h1>
-<p>Acres Development</p>
-</div>
-
-<div class="highlight-item">
-<h1>₹10,000</h1>
-<p>Starting EMI</p>
-</div>
-
+<div class="highlight-item"><h1>95</h1><p>Premium Plots</p></div>
+<div class="highlight-item"><h1>7</h1><p>Acres Development</p></div>
+<div class="highlight-item"><h1>₹10,000</h1><p>Starting EMI</p></div>
 </div>
 </section>
 
 <div class="divider"></div>
 
-<!-- GALLERY -->
 <section class="section" id="gallery">
 <h2>Project Gallery</h2>
-
 <div class="gallery">
 <img src="images/slide1.jpg" onclick="openModal(this.src)">
 <img src="images/slide2.jpg" onclick="openModal(this.src)">
 <img src="images/slide3.jpg" onclick="openModal(this.src)">
-<video controls>
-<source src="images/reel.mp4" type="video/mp4">
-</video>
+<video controls><source src="images/reel.mp4" type="video/mp4"></video>
 </div>
 </section>
 
-<!-- MODAL -->
-<div id="imageModal" class="modal">
-<span class="close" onclick="closeModal()">&times;</span>
-<img class="modal-content" id="modalImg">
-</div>
-
 <div class="divider"></div>
 
-<!-- LOCATION -->
 <section class="section" id="location">
 <h2>Project Location</h2>
 <div class="map">
@@ -367,16 +358,24 @@ border-top:1px solid rgba(212,175,55,0.3);
 
 <div class="divider"></div>
 
-<!-- ENQUIRY -->
 <section class="section" id="enquiry">
 <h2>Enquiry Form</h2>
-
 <form id="enquiryForm">
 <input type="text" id="name" placeholder="Your Name" required>
 <input type="tel" id="mobile" placeholder="10 Digit Mobile Number" required pattern="[0-9]{10}">
 <textarea id="message" placeholder="Message" required></textarea>
 <button type="submit" class="submit">Submit</button>
 </form>
+</section>
+
+<!-- NEW BOOK SECTION -->
+<section class="book-section">
+<h2>Book Your Plot</h2>
+<div class="limited">Limited Availability</div>
+<div class="quote">
+"Land is the only asset that grows silently while you sleep."
+</div>
+<button class="btn gold" onclick="bookNow()">Book Now</button>
 </section>
 
 <footer>
@@ -406,18 +405,12 @@ e.preventDefault();
 let name=document.getElementById("name").value.trim();
 let mobile=document.getElementById("mobile").value.trim();
 let message=document.getElementById("message").value.trim();
-
-if(!/^[0-9]{10}$/.test(mobile)){
-alert("Enter valid 10 digit mobile number");
-return;
-}
-
+if(!/^[0-9]{10}$/.test(mobile)){alert("Enter valid 10 digit mobile number");return;}
 let whatsapp="916303531088";
 let text=`New Plot Enquiry:
 Name: ${name}
 Mobile: ${mobile}
 Message: ${message}`;
-
 window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`,'_blank');
 this.reset();
 });
