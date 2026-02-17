@@ -151,13 +151,40 @@ color:#D4AF37;
 font-size:32px;
 }
 
-/* BOX */
-.box{
-border:1px solid rgba(212,175,55,0.4);
-padding:30px;
-border-radius:15px;
+/* NEW HIGHLIGHTS */
+.highlights-grid{
+display:flex;
+justify-content:center;
+gap:40px;
+flex-wrap:wrap;
+margin-top:40px;
+}
+
+.highlight-item{
 background:#111;
-margin:10px;
+border:1px solid rgba(212,175,55,0.4);
+padding:40px 50px;
+border-radius:15px;
+min-width:220px;
+transition:0.3s;
+}
+
+.highlight-item:hover{
+transform:translateY(-8px);
+box-shadow:0 0 25px rgba(212,175,55,0.4);
+}
+
+.highlight-item h1{
+font-family:'Cinzel',serif;
+font-size:65px;
+color:#D4AF37;
+margin-bottom:10px;
+letter-spacing:2px;
+}
+
+.highlight-item p{
+font-size:14px;
+letter-spacing:1px;
 }
 
 /* GALLERY */
@@ -270,7 +297,6 @@ border-top:1px solid rgba(212,175,55,0.3);
 <img src="images/hero.jpg" alt="Logo">
 <h1>Golden Valley</h1>
 <h2>Premium Gated Layout | 7 Acres Development</h2>
-
 <div class="limited">Limited Plots Available</div>
 
 <div class="hero-buttons">
@@ -283,10 +309,28 @@ border-top:1px solid rgba(212,175,55,0.3);
 
 <div class="divider"></div>
 
-<!-- ABOUT -->
+<!-- PROJECT HIGHLIGHTS -->
 <section class="section" id="about">
 <h2>Project Highlights</h2>
-<div class="box">95 Premium Plots | 7 Acres | Starting EMI ₹10,000</div>
+
+<div class="highlights-grid">
+
+<div class="highlight-item">
+<h1>95</h1>
+<p>Premium Plots</p>
+</div>
+
+<div class="highlight-item">
+<h1>7</h1>
+<p>Acres Development</p>
+</div>
+
+<div class="highlight-item">
+<h1>₹10,000</h1>
+<p>Starting EMI</p>
+</div>
+
+</div>
 </section>
 
 <div class="divider"></div>
@@ -317,7 +361,7 @@ border-top:1px solid rgba(212,175,55,0.3);
 <section class="section" id="location">
 <h2>Project Location</h2>
 <div class="map">
-<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771307412055!5m2!1sen!2sin"></iframe>
+<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2f768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771307412055!5m2!1sen!2sin"></iframe>
 </div>
 </section>
 
@@ -339,21 +383,15 @@ border-top:1px solid rgba(212,175,55,0.3);
 © 2026 Golden Valley | Rayachoty
 </footer>
 
-<!-- FLOATING BOOK BUTTON -->
-<div class="floating-book" onclick="bookNow()">
-Book Your Plot
-</div>
+<div class="floating-book" onclick="bookNow()">Book Your Plot</div>
 
 <script>
-
-/* BOOK NOW */
 function bookNow(){
 let message="Hello, I am interested in booking a plot in Golden Valley. Please share details.";
 let whatsapp="916303531088";
 window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`,'_blank');
 }
 
-/* IMAGE POPUP */
 function openModal(src){
 document.getElementById("imageModal").style.display="block";
 document.getElementById("modalImg").src=src;
@@ -363,7 +401,6 @@ function closeModal(){
 document.getElementById("imageModal").style.display="none";
 }
 
-/* FORM WHATSAPP */
 document.getElementById("enquiryForm").addEventListener("submit",function(e){
 e.preventDefault();
 let name=document.getElementById("name").value.trim();
