@@ -213,6 +213,43 @@ padding:0;
 padding:12px 0;
 border-bottom:1px solid rgba(212,175,55,0.2);
 }
+/* Amenities Section */
+.amenities-section {
+    padding: 70px 20px;
+    background: #f9f9f9;
+    text-align: center;
+}
+
+.section-title {
+    font-size: 32px;
+    margin-bottom: 40px;
+    font-weight: 600;
+}
+
+.amenities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+    max-width: 1100px;
+    margin: auto;
+}
+
+.amenity-card {
+    background: #ffffff;
+    padding: 30px 20px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    transition: 0.3s ease;
+}
+
+.amenity-card:hover {
+    transform: translateY(-8px);
+}
+
+.amenity-icon {
+    font-size: 40px;
+    margin-bottom: 15px;
+}
 
 /* GALLERY */
 .gallery{
@@ -362,18 +399,47 @@ border-top:1px solid rgba(212,175,55,0.3);
 
 <div class="gold-line"></div>
 
-<!-- AMENITIES -->
-<section class="amenities">
-<h2>Amenities</h2>
-<ul>
-<li>🏊‍♂️ Swimming Pool</li>
-<li>🌳 Park & Walking Area</li>
-<li>🏠 Club House</li>
-<li>🚸 Children Play Area</li>
-<li>🛣️ Planned Roads</li>
-<li>🔐 Gated Community</li>
-</ul>
+<!-- Amenities Section -->
+<section class="amenities-section">
+    <div class="container">
+        <h2 class="section-title">Premium Amenities</h2>
+
+        <div class="amenities-grid">
+
+            <div class="amenity-card">
+                <div class="amenity-icon">🏊‍♂️</div>
+                <h3>Swimming Pool</h3>
+            </div>
+
+            <div class="amenity-card">
+                <div class="amenity-icon">🌳</div>
+                <h3>Park & Walking Area</h3>
+            </div>
+
+            <div class="amenity-card">
+                <div class="amenity-icon">🏠</div>
+                <h3>Club House</h3>
+            </div>
+
+            <div class="amenity-card">
+                <div class="amenity-icon">🚸</div>
+                <h3>Children Play Area</h3>
+            </div>
+
+            <div class="amenity-card">
+                <div class="amenity-icon">🛣️</div>
+                <h3>Planned Roads</h3>
+            </div>
+
+            <div class="amenity-card">
+                <div class="amenity-icon">🔐</div>
+                <h3>Gated Community</h3>
+            </div>
+
+        </div>
+    </div>
 </section>
+
 
 <div class="divider"></div>
 
@@ -501,4 +567,5 @@ this.reset();
 
 </body>
 </html>
+
 
