@@ -139,6 +139,14 @@ background:#D4AF37;
 margin:60px auto;
 }
 
+/* GOLD LINE */
+.gold-line{
+width:100%;
+height:1px;
+background:rgba(212,175,55,0.3);
+margin:60px 0;
+}
+
 /* SECTION */
 .section{
 padding:100px 20px;
@@ -151,13 +159,59 @@ color:#D4AF37;
 font-size:32px;
 }
 
-/* BOX */
-.box{
-border:1px solid rgba(212,175,55,0.4);
-padding:30px;
-border-radius:15px;
-background:#111;
-margin:10px;
+/* ===== PROJECT HIGHLIGHTS ===== */
+.highlight-box{
+display:flex;
+justify-content:center;
+align-items:center;
+gap:80px;
+flex-wrap:wrap;
+margin-top:50px;
+}
+
+.highlight-item{
+text-align:center;
+}
+
+.highlight-number{
+font-size:65px;
+font-weight:700;
+color:#D4AF37;
+margin-bottom:10px;
+letter-spacing:2px;
+}
+
+.highlight-item span{
+font-size:18px;
+color:#fff;
+}
+
+/* ===== AMENITIES ===== */
+.amenities{
+padding:100px 20px;
+text-align:center;
+}
+
+.amenities h2{
+font-family:'Cinzel',serif;
+color:#D4AF37;
+font-size:32px;
+}
+
+.amenities ul{
+list-style:none;
+margin-top:40px;
+max-width:600px;
+margin-left:auto;
+margin-right:auto;
+line-height:2.2;
+font-size:18px;
+padding:0;
+}
+
+.amenities li{
+padding:12px 0;
+border-bottom:1px solid rgba(212,175,55,0.2);
 }
 
 /* GALLERY */
@@ -250,191 +304,6 @@ text-align:center;
 padding:25px;
 border-top:1px solid rgba(212,175,55,0.3);
 }
-
-.highlight-number {
-  font-size:60px;
-  font-weight:700;
-  color:gold;
-  margin-bottom:10px;
-  letter-spacing:2px;
-}
-
-.highlight-item span {
-  font-size:18px;
-  color:#fff;
-}
-
 </style>
 </head>
 <body>
-
-<!-- NAVBAR -->
-<div class="navbar">
-<div class="logo">Golden Valley</div>
-<div class="nav-links">
-<a href="#about">About</a>
-<a href="#gallery">Gallery</a>
-<a href="#location">Location</a>
-<a href="#enquiry">Enquiry</a>
-</div>
-</div>
-
-<!-- HERO -->
-<section class="hero">
-<img src="images/hero.jpg" alt="Logo">
-<h1>Golden Valley</h1>
-<h2>Premium Gated Layout | 7 Acres Development</h2>
-
-<div class="limited">Limited Plots Available</div>
-
-<div class="hero-buttons">
-<a href="brochure.pdf" download>
-<button class="btn gold">Download Brochure</button>
-</a>
-<button class="btn outline" onclick="bookNow()">Book Your Plot</button>
-</div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ABOUT -->
-<!-- PROJECT HIGHLIGHTS -->
-<section class="fade">
-  <h2>Project Highlights</h2>
-
-  <div class="highlight-box">
-
-    <div class="highlight-item">
-      <div class="highlight-number">95</div>
-      <span>Premium Plots</span>
-    </div>
-
-    <div class="highlight-item">
-      <div class="highlight-number">7</div>
-      <span>Acres of Land</span>
-    </div>
-
-    <div class="highlight-item">
-      <div class="highlight-number">₹10,000</div>
-      <span>Starting EMI</span>
-    </div>
-
-  </div>
-</section>
-<div class="gold-line"></div>
-
-<!-- AMENITIES -->
-<section class="amenities fade">
-  <h2>Amenities</h2>
-
-  <ul>
-    <li>🏊‍♂️ Swimming Pool</li>
-    <li>🌳 Park & Walking Area</li>
-    <li>🏠 Club House</li>
-    <li>🚸 Children Play Area</li>
-    <li>🛣️ Planned Roads</li>
-    <li>🔐 Gated Community</li>
-  </ul>
-</section>
-
-
-<div class="divider"></div>
-
-<!-- GALLERY -->
-<section class="section" id="gallery">
-<h2>Project Gallery</h2>
-
-<div class="gallery">
-<img src="images/slide1.jpg" onclick="openModal(this.src)">
-<img src="images/slide2.jpg" onclick="openModal(this.src)">
-<img src="images/slide3.jpg" onclick="openModal(this.src)">
-<video controls>
-<source src="images/reel.mp4" type="video/mp4">
-</video>
-</div>
-</section>
-
-<!-- MODAL -->
-<div id="imageModal" class="modal">
-<span class="close" onclick="closeModal()">&times;</span>
-<img class="modal-content" id="modalImg">
-</div>
-
-<div class="divider"></div>
-
-<!-- LOCATION -->
-<section class="section" id="location">
-<h2>Project Location</h2>
-<div class="map">
-<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771307412055!5m2!1sen!2sin"></iframe>
-</div>
-</section>
-
-<div class="divider"></div>
-
-<!-- ENQUIRY -->
-<section class="section" id="enquiry">
-<h2>Enquiry Form</h2>
-
-<form id="enquiryForm">
-<input type="text" id="name" placeholder="Your Name" required>
-<input type="tel" id="mobile" placeholder="10 Digit Mobile Number" required pattern="[0-9]{10}">
-<textarea id="message" placeholder="Message" required></textarea>
-<button type="submit" class="submit">Submit</button>
-</form>
-</section>
-
-<footer>
-© 2026 Golden Valley | Rayachoty
-</footer>
-
-<!-- FLOATING BOOK BUTTON -->
-<div class="floating-book" onclick="bookNow()">
-Book Your Plot
-</div>
-
-<script>
-
-/* BOOK NOW */
-function bookNow(){
-let message="Hello, I am interested in booking a plot in Golden Valley. Please share details.";
-let whatsapp="916303531088";
-window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(message)}`,'_blank');
-}
-
-/* IMAGE POPUP */
-function openModal(src){
-document.getElementById("imageModal").style.display="block";
-document.getElementById("modalImg").src=src;
-}
-
-function closeModal(){
-document.getElementById("imageModal").style.display="none";
-}
-
-/* FORM WHATSAPP */
-document.getElementById("enquiryForm").addEventListener("submit",function(e){
-e.preventDefault();
-let name=document.getElementById("name").value.trim();
-let mobile=document.getElementById("mobile").value.trim();
-let message=document.getElementById("message").value.trim();
-
-if(!/^[0-9]{10}$/.test(mobile)){
-alert("Enter valid 10 digit mobile number");
-return;
-}
-
-let whatsapp="916303531088";
-let text=`New Plot Enquiry:
-Name: ${name}
-Mobile: ${mobile}
-Message: ${message}`;
-
-window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(text)}`,'_blank');
-this.reset();
-});
-</script>
-
-</body>
-</html>
-
