@@ -181,6 +181,7 @@ h1,h2 {
   <p>Luxury Plots in Rayachoty</p>
 
   <a href="#enquiry" class="btn">Book Your Plot</a>
+  <!-- ✅ Added Download Brochure Button -->
   <a href="brochure.pdf" class="btn" download>Download Brochure</a>
 </section>
 
@@ -267,7 +268,6 @@ h1,h2 {
 
 <script>
 
-// WhatsApp Auto Fill
 function sendWhatsApp() {
   let name = document.getElementById("name").value;
   let phone = document.getElementById("phone").value;
@@ -281,7 +281,6 @@ function sendWhatsApp() {
   window.open(url, "_blank");
 }
 
-// Gallery Popup
 function openPopup(src) {
   document.getElementById("popup").style.display="flex";
   document.getElementById("popup-img").src=src;
@@ -291,19 +290,6 @@ function closePopup() {
   document.getElementById("popup").style.display="none";
 }
 
-// Scroll Animation
-const faders = document.querySelectorAll('.fade');
-
-window.addEventListener('scroll', () => {
-  faders.forEach(el => {
-    const top = el.getBoundingClientRect().top;
-    if(top < window.innerHeight - 100){
-      el.classList.add('show');
-    }
-  });
-});
-
-// Always load from top
 window.onload = function () {
   window.scrollTo(0,0);
   if ('scrollRestoration' in history) {
