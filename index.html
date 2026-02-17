@@ -9,52 +9,80 @@
 
 <style>
 
+html { scroll-behavior:smooth; }
+
 body{
 margin:0;
 font-family:'Poppins',sans-serif;
-background:linear-gradient(135deg,#141414,#1b1b1b,#2a1f0f);
+background:linear-gradient(135deg,#0f0f0f,#1a1a1a,#1a1408);
 color:#fff;
-scroll-behavior:smooth;
 }
 
-#loader{
+/* ================= NAVBAR ================= */
+.navbar{
 position:fixed;
+top:0;
 width:100%;
-height:100vh;
-background:#000;
+backdrop-filter:blur(12px);
+background:rgba(0,0,0,0.6);
 display:flex;
-justify-content:center;
+justify-content:space-between;
 align-items:center;
-z-index:9999;
+padding:15px 40px;
+z-index:1000;
+border-bottom:1px solid rgba(255,215,0,0.3);
 }
-.loader-text{
+
+.navbar a{
+color:#fff;
+text-decoration:none;
+margin:0 15px;
+font-weight:500;
+}
+
+.logo{
 font-family:'Playfair Display',serif;
-font-size:30px;
 color:gold;
-animation:blink 1.5s infinite;
+font-size:22px;
 }
+
+.badge{
+background:red;
+color:#fff;
+padding:5px 12px;
+border-radius:20px;
+font-size:12px;
+margin-left:10px;
+}
+
+.emi-badge{
+background:gold;
+color:#000;
+padding:6px 14px;
+border-radius:20px;
+font-weight:600;
+animation:blink 1.2s infinite;
+}
+
 @keyframes blink{
 0%,100%{opacity:1;}
 50%{opacity:0.3;}
 }
 
-.gold{
-color:gold;
-font-family:'Playfair Display',serif;
-}
-
+/* ================= SECTIONS ================= */
 section{
-padding:80px 20px;
+padding:110px 20px;
 text-align:center;
 }
 
+/* ================= HERO ================= */
 .hero{
 height:100vh;
 display:flex;
 flex-direction:column;
 justify-content:center;
 align-items:center;
-background:radial-gradient(circle at center,#2c2c2c,#111);
+background:radial-gradient(circle at center,#242424,#111);
 }
 
 .hero img{
@@ -62,31 +90,40 @@ width:160px;
 margin-bottom:20px;
 }
 
+.gold{
+color:gold;
+font-family:'Playfair Display',serif;
+}
+
 .btn{
 background:gold;
 color:#000;
-padding:12px 25px;
+padding:12px 28px;
 border-radius:30px;
 text-decoration:none;
 font-weight:600;
 margin:10px;
 display:inline-block;
+transition:0.3s;
 }
 
-/* About Section */
-.about{
+.btn:hover{
+transform:translateY(-3px);
+box-shadow:0 5px 15px rgba(255,215,0,0.4);
+}
+
+/* ================= ABOUT ================= */
+.about-box{
 max-width:1000px;
 margin:auto;
-line-height:1.8;
-}
-.about-box{
 background:#1c1c1c;
 padding:40px;
 border-radius:15px;
 border:1px solid rgba(255,215,0,0.3);
+line-height:1.8;
 }
 
-/* Counter */
+/* ================= COUNTER ================= */
 .counter{
 display:flex;
 justify-content:center;
@@ -99,7 +136,7 @@ color:gold;
 margin:0;
 }
 
-/* Gallery */
+/* ================= GALLERY ================= */
 .gallery-container{
 display:flex;
 gap:20px;
@@ -128,7 +165,7 @@ height:100%;
 background:rgba(0,0,0,0.9);
 justify-content:center;
 align-items:center;
-z-index:10000;
+z-index:2000;
 }
 .popup img,
 .popup video{
@@ -137,7 +174,7 @@ max-height:90%;
 border-radius:12px;
 }
 
-/* Amenities */
+/* ================= AMENITIES ================= */
 .amenities-list{
 display:flex;
 justify-content:center;
@@ -152,7 +189,7 @@ border:1px solid rgba(255,215,0,0.3);
 width:200px;
 }
 
-/* Map */
+/* ================= MAP ================= */
 .map-box{
 width:90%;
 max-width:1000px;
@@ -162,11 +199,12 @@ overflow:hidden;
 border:1px solid rgba(255,215,0,0.4);
 }
 
-/* Booking */
+/* ================= BOOKING ================= */
 .booking{
 background:#111;
 }
 
+/* ================= WHATSAPP ================= */
 .whatsapp{
 position:fixed;
 bottom:20px;
@@ -177,8 +215,10 @@ padding:15px 20px;
 border-radius:50px;
 text-decoration:none;
 font-weight:bold;
+z-index:2000;
 }
 
+/* ================= FOOTER ================= */
 footer{
 text-align:center;
 padding:30px;
@@ -189,44 +229,52 @@ background:#000;
 </head>
 <body>
 
-<div id="loader">
-<div class="loader-text">GOLDEN VALLEY</div>
+<!-- NAVBAR -->
+<div class="navbar">
+<div class="logo">Golden Valley</div>
+<div>
+<a href="#about">About</a>
+<a href="#gallery">Gallery</a>
+<a href="#location">Location</a>
+<span class="badge">Limited Plots Left</span>
+<span class="emi-badge">EMI ₹10,000</span>
+</div>
 </div>
 
 <!-- HERO -->
 <section class="hero">
 <img src="images/hero.jpg">
+
 <h1 class="gold">Golden Valley – Rayachoty</h1>
-<p>95 Premium Plots | 7 Acres | EMI Starts ₹10,000</p>
-<a href="brochure.pdf" class="btn" download>Download Brochure</a>
-<a href="#booking" class="btn">Book Now</a>
+<p>Premium Gated Layout | 7 Acres Development</p>
+
+<div style="margin-top:20px;">
+
+<a href="brochure.pdf" class="btn" download>
+📄 Download Brochure
+</a>
+
+<a href="#booking" class="btn">
+Book Your Plot
+</a>
+
+</div>
+
 </section>
 
-<!-- ABOUT VENTURE -->
-<section class="about">
-<h2 class="gold">About Golden Valley</h2>
-
+<!-- ABOUT -->
+<section id="about">
+<h2 class="gold">About The Venture</h2>
 <div class="about-box">
-<p>
-Golden Valley is a premium gated plotted development located in the rapidly growing area of Rayachoty. 
-Spread across 7 acres of thoughtfully planned land, this venture offers 95 premium residential plots designed 
-for comfortable living and strong future appreciation.
-</p>
+Golden Valley is a premium plotted development in Rayachoty designed for
+modern families and smart investors. Spread across 7 acres of well-planned
+layout, this gated community offers secure living, wide internal roads,
+future-ready infrastructure and peaceful surroundings.
 
-<p>
-Strategically located with excellent connectivity, Golden Valley combines peaceful surroundings with urban convenience. 
-Wide internal roads, secure layout planning, and future-ready infrastructure make it an ideal destination 
-for families and investors alike.
-</p>
+Strategically located near developing residential zones, this venture
+ensures strong appreciation potential and comfortable lifestyle benefits.
 
-<p>
-Whether you are planning to build your dream home or secure a high-return real estate investment, 
-Golden Valley offers the perfect opportunity with flexible EMI options starting at just ₹10,000.
-</p>
-
-<p>
 Invest today. Build tomorrow. Grow forever.
-</p>
 </div>
 </section>
 
@@ -249,7 +297,7 @@ Invest today. Build tomorrow. Grow forever.
 </section>
 
 <!-- GALLERY -->
-<section>
+<section id="gallery">
 <h2 class="gold">Project Gallery</h2>
 <div class="gallery-container">
 <img src="images/slide1.jpg" onclick="openPopup(this.src,'image')">
@@ -275,11 +323,12 @@ Invest today. Build tomorrow. Grow forever.
 <div>🚸 Kids Play Zone</div>
 <div>🛣️ 40ft Roads</div>
 <div>🔐 Gated Community</div>
+<div>🛕 Temple</div>
 </div>
 </section>
 
-<!-- MAP -->
-<section>
+<!-- LOCATION -->
+<section id="location">
 <h2 class="gold">Project Location</h2>
 <div class="map-box">
 <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3869.655128043904!2d78.7923568!3d14.097524400000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bb30300746d83c1%3A0xfc286d1579787990!2sGolden%20Valley!5e0!3m2!1sen!2sin!4v1771263873864!5m2!1sen!2sin"
@@ -291,9 +340,10 @@ width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy">
 <!-- BOOKING -->
 <section class="booking" id="booking">
 <h2 class="gold">Book Your Plot Today</h2>
-<p>Limited Availability – Secure Your Future Address</p>
+<p>Secure Your Premium Address in Golden Valley</p>
+
 <a href="https://wa.me/916303531088?text=I%20am%20interested%20in%20Golden%20Valley%20Rayachoty" class="btn">
-Enquire on WhatsApp
+Book Your Plot
 </a>
 </section>
 
@@ -304,13 +354,13 @@ Enquire on WhatsApp
 <a href="https://wa.me/916303531088?text=I%20want%20details%20about%20Golden%20Valley" class="whatsapp">Chat</a>
 
 <script>
+
 if ('scrollRestoration' in history) {
 history.scrollRestoration = 'manual';
 }
 
 window.onload = function(){
 window.scrollTo(0,0);
-document.getElementById("loader").style.display="none";
 animateCounter("plots",95,"");
 animateCounter("acres",7,"");
 animateCounter("emi",10000,"₹");
@@ -339,10 +389,12 @@ content.innerHTML="<video src='"+src+"' controls autoplay></video>";
 }
 popup.style.display="flex";
 }
+
 function closePopup(){
 document.getElementById("popup").style.display="none";
 document.getElementById("popup-content").innerHTML="";
 }
+
 </script>
 
 </body>
