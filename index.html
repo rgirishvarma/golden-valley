@@ -42,7 +42,6 @@ color:#fff;
 text-decoration:none;
 margin:0 15px;
 font-size:14px;
-letter-spacing:1px;
 }
 
 .nav-links a:hover{color:#D4AF37}
@@ -60,8 +59,9 @@ padding:20px;
 }
 
 .hero img{
-width:90px;
+width:120px;
 margin-bottom:20px;
+border-radius:10px;
 }
 
 .hero h1{
@@ -69,7 +69,6 @@ font-family:'Cinzel',serif;
 font-size:48px;
 color:#D4AF37;
 letter-spacing:3px;
-text-shadow:0 0 20px rgba(212,175,55,0.4);
 }
 
 .hero h2{
@@ -84,7 +83,6 @@ padding:8px 25px;
 border:1px solid #D4AF37;
 border-radius:30px;
 font-size:13px;
-letter-spacing:1px;
 }
 
 .hero-buttons{margin-top:35px;}
@@ -110,12 +108,12 @@ border:1px solid #D4AF37;
 color:#D4AF37;
 }
 
-/* GOLD DIVIDER */
+/* DIVIDER */
 .divider{
 width:80px;
 height:2px;
 background:#D4AF37;
-margin:25px auto;
+margin:40px auto;
 }
 
 /* SECTION */
@@ -128,34 +126,15 @@ text-align:center;
 font-family:'Cinzel',serif;
 color:#D4AF37;
 font-size:32px;
-letter-spacing:2px;
 }
 
-/* HIGHLIGHT BOX */
-.highlight-box{
-display:flex;
-justify-content:center;
-gap:30px;
-flex-wrap:wrap;
-margin-top:40px;
-}
-
+/* BOX */
 .box{
 border:1px solid rgba(212,175,55,0.4);
 padding:30px;
-min-width:220px;
 border-radius:15px;
 background:#111;
-letter-spacing:1px;
-}
-
-/* AMENITIES */
-.amenities{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-gap:20px;
-max-width:900px;
-margin:40px auto 0;
+margin:10px;
 }
 
 /* GALLERY */
@@ -166,9 +145,45 @@ gap:20px;
 max-width:1000px;
 margin:40px auto 0;
 }
+
 .gallery img, .gallery video{
 width:100%;
 border-radius:15px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.gallery img:hover{
+transform:scale(1.05);
+}
+
+/* POPUP MODAL */
+.modal{
+display:none;
+position:fixed;
+z-index:2000;
+padding-top:100px;
+left:0;
+top:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.9);
+}
+
+.modal-content{
+margin:auto;
+display:block;
+max-width:80%;
+border-radius:15px;
+}
+
+.close{
+position:absolute;
+top:30px;
+right:50px;
+color:#fff;
+font-size:35px;
+cursor:pointer;
 }
 
 /* MAP */
@@ -207,13 +222,6 @@ font-weight:600;
 cursor:pointer;
 }
 
-/* BOOK SECTION */
-.book{
-padding:80px 20px;
-text-align:center;
-background:#0a0a0a;
-}
-
 footer{
 text-align:center;
 padding:25px;
@@ -228,17 +236,15 @@ border-top:1px solid rgba(212,175,55,0.3);
 <div class="logo">Golden Valley</div>
 <div class="nav-links">
 <a href="#about">About</a>
-<a href="#amenities">Amenities</a>
 <a href="#gallery">Gallery</a>
 <a href="#location">Location</a>
 <a href="#enquiry">Enquiry</a>
-<a href="#book">Book</a>
 </div>
 </div>
 
 <!-- HERO -->
 <section class="hero">
-<img src="logo.png" alt="Logo">
+<img src="images/hero.jpg" alt="Logo">
 <h1>Golden Valley</h1>
 <h2>Premium Gated Layout | 7 Acres Development</h2>
 
@@ -248,7 +254,7 @@ border-top:1px solid rgba(212,175,55,0.3);
 <a href="brochure.pdf" download>
 <button class="btn gold">Download Brochure</button>
 </a>
-<a href="#book">
+<a href="#enquiry">
 <button class="btn outline">Book Your Plot</button>
 </a>
 </div>
@@ -259,30 +265,7 @@ border-top:1px solid rgba(212,175,55,0.3);
 <!-- ABOUT -->
 <section class="section" id="about">
 <h2>Project Highlights</h2>
-<div class="divider"></div>
-
-<div class="highlight-box">
-<div class="box">95 Premium Plots</div>
-<div class="box">7 Acres Development</div>
-<div class="box">Starting EMI ₹10,000</div>
-</div>
-</section>
-
-<div class="divider"></div>
-
-<!-- AMENITIES -->
-<section class="section" id="amenities">
-<h2>Amenities</h2>
-<div class="divider"></div>
-
-<div class="amenities">
-<div class="box">🏊‍♂️ Swimming Pool</div>
-<div class="box">🌳 Park & Walking Area</div>
-<div class="box">🏠 Club House</div>
-<div class="box">🚸 Children Play Area</div>
-<div class="box">🛣️ Planned Roads</div>
-<div class="box">🔐 Gated Community</div>
-</div>
+<div class="box">95 Premium Plots | 7 Acres | EMI ₹10,000</div>
 </section>
 
 <div class="divider"></div>
@@ -290,25 +273,28 @@ border-top:1px solid rgba(212,175,55,0.3);
 <!-- GALLERY -->
 <section class="section" id="gallery">
 <h2>Project Gallery</h2>
-<div class="divider"></div>
 
 <div class="gallery">
-<img src="image1.jpg">
-<img src="image2.jpg">
-<img src="image3.jpg">
+<img src="images/slide1.jpg" onclick="openModal(this.src)">
+<img src="images/slide2.jpg" onclick="openModal(this.src)">
+<img src="images/slide3.jpg" onclick="openModal(this.src)">
 <video controls>
-<source src="reel.mp4" type="video/mp4">
+<source src="images/reel.mp4" type="video/mp4">
 </video>
 </div>
 </section>
+
+<!-- IMAGE MODAL -->
+<div id="imageModal" class="modal">
+<span class="close" onclick="closeModal()">&times;</span>
+<img class="modal-content" id="modalImg">
+</div>
 
 <div class="divider"></div>
 
 <!-- LOCATION -->
 <section class="section" id="location">
 <h2>Project Location</h2>
-<div class="divider"></div>
-
 <div class="map">
 <iframe src="https://maps.google.com/maps?q=Rayachoty&t=&z=13&ie=UTF8&iwloc=&output=embed"></iframe>
 </div>
@@ -319,7 +305,6 @@ border-top:1px solid rgba(212,175,55,0.3);
 <!-- ENQUIRY -->
 <section class="section" id="enquiry">
 <h2>Enquiry Form</h2>
-<div class="divider"></div>
 
 <form id="enquiryForm">
 <input type="text" id="name" placeholder="Your Name" required>
@@ -329,22 +314,23 @@ border-top:1px solid rgba(212,175,55,0.3);
 </form>
 </section>
 
-<div class="divider"></div>
-
-<!-- BOOK -->
-<section class="book" id="book">
-<h2 style="font-family:'Cinzel',serif;color:#D4AF37;">Book Your Plot Today</h2>
-<br>
-<a href="#enquiry">
-<button class="btn gold">Reserve Now</button>
-</a>
-</section>
-
 <footer>
 © 2026 Golden Valley | Rayachoty
 </footer>
 
 <script>
+
+/* IMAGE MODAL */
+function openModal(src){
+document.getElementById("imageModal").style.display="block";
+document.getElementById("modalImg").src=src;
+}
+
+function closeModal(){
+document.getElementById("imageModal").style.display="none";
+}
+
+/* WHATSAPP FORM */
 document.getElementById("enquiryForm").addEventListener("submit",function(e){
 e.preventDefault();
 let name=document.getElementById("name").value.trim();
