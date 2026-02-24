@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Golden Valley • Login</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <main class="container" style="max-width:520px;">
+    <section class="card" style="margin-top:40px;">
+      <div class="cardHeader">
+        <h2>Portal Login</h2>
+      </div>
+      <div style="padding:14px; display:grid; gap:10px;">
+        <div class="field">
+          <label>Email</label>
+          <input id="email" class="input" style="width:100%;" placeholder="admin@email.com" />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="password" type="password" class="input" style="width:100%;" placeholder="••••••••" />
+        </div>
+
+        <button class="btn" id="btnLogin" style="width:100%;">Login</button>
+        <div class="help" id="msg"></div>
+
+        <div class="help">
+          OTP login will be added later. For now use email/password created in Supabase Auth.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { signInWithEmail, getMyProfile } from "./db.js";
+
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const msg = document.getElementById("msg");
+
+    document.getElementById("btnLogin").addEventListener("click", async () => {
+      msg.textContent = "";
+      try {
+        await signInWithEmail(email.value.trim(), password.value);
+        const profile = await getMyProfile();
+
+        if (!profile) {
+          msg.textContent = "No profile row found. Ask admin to create your profile.";
+          return;
+        }
+
+        // Redirect by role
+        window.location.replace(profile.role === "admin" ? "./index.html" : "./user-home.html");
+      } catch (e) {
+        msg.textContent = e?.message || "Login failed";
+      }
+    });
+  </script>
+</body>
+</html>
