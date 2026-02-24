@@ -1,5 +1,5 @@
 // Admin/User Portal UI (no login yet). Data is temporary in-memory.
-// Later we will connect this to Supabase + OTP + RLS.
+// Later: Connect Supabase + OTP + RLS (users only see their plots/payments).
 
 let users = [
   { id: "u1", name: "Admin", phone: "+91XXXXXXXXXX", role: "admin" },
@@ -8,11 +8,19 @@ let users = [
 ];
 
 let plots = [
-  { id: "p1", plot: "A-101", status: "Available", ownerUserId: null, location: "Block A", notes: "Near entrance" },
-  { id: "p2", plot: "A-102", status: "Assigned", ownerUserId: "u2", location: "Block A", notes: "Corner plot" },
-  { id: "p3", plot: "B-201", status: "Assigned", ownerUserId: "u3", location: "Block B", notes: "East facing" },
+  { id: "p1", plot: "A-101", status: "Available", ownerUserId: null, location: "Block A", notes: "Near entrance", totalPrice: 600000 },
+  { id: "p2", plot: "A-102", status: "Assigned", ownerUserId: "u2", location: "Block A", notes: "Corner plot", totalPrice: 650000 },
+  { id: "p3", plot: "B-201", status: "Assigned", ownerUserId: "u3", location: "Block B", notes: "East facing", totalPrice: 700000 },
 ];
 
+// Payments: linked to user + plot
+let payments = [
+  { id: "pay1", userId: "u2", plotId: "p2", date: "2026-02-10", amount: 50000, mode: "UPI", note: "Advance" },
+  { id: "pay2", userId: "u2", plotId: "p2", date: "2026-02-18", amount: 25000, mode: "Cash", note: "Second payment" },
+  { id: "pay3", userId: "u3", plotId: "p3", date: "2026-02-20", amount: 100000, mode: "Bank Transfer", note: "Booking" },
+];
+
+// Elements (may not exist on all pages)
 const elPlotsBody = document.querySelector("#plotsTable tbody");
 const elUsersBody = document.querySelector("#usersTable tbody");
 const elSearch = document.getElementById("plotSearch");
@@ -25,6 +33,7 @@ const modalOk = document.getElementById("modalOk");
 
 let modalOnSave = null;
 
+// -------- core helpers --------
 function ownerInfo(plotRow) {
   const u = users.find(x => x.id === plotRow.ownerUserId);
   return u ? u : null;
@@ -37,8 +46,15 @@ function badgeForStatus(status) {
   return `<span class="badge green">Available</span>`;
 }
 
+function formatDate(d) {
+  // accepts "YYYY-MM-DD" or Date
+  if (!d) return "";
+  if (typeof d === "string") return d;
+  return new Date(d).toISOString().slice(0, 10);
+}
+
+// -------- render tables --------
 function renderPlots() {
-  // if this page doesn't have plots table, skip
   if (!elPlotsBody) return;
 
   const q = (elSearch?.value || "").trim().toLowerCase();
@@ -63,7 +79,6 @@ function renderPlots() {
 }
 
 function renderUsers() {
-  // if this page doesn't have users table, skip
   if (!elUsersBody) return;
 
   elUsersBody.innerHTML = users.map(u => {
@@ -87,6 +102,7 @@ function renderUsers() {
   }).join("");
 }
 
+// -------- modal --------
 function openModal({ title, bodyHtml, onSave }) {
   if (!modal) return;
   modalTitle.textContent = title;
@@ -110,7 +126,7 @@ if (modalOk) modalOk.addEventListener("click", async () => {
   renderAll();
 });
 
-// Buttons exist only on some pages
+// -------- buttons on pages --------
 const btnAddPlot = document.getElementById("btnAddPlot");
 if (btnAddPlot) {
   btnAddPlot.addEventListener("click", () => {
@@ -125,6 +141,7 @@ if (btnAddPlot) {
             <option>Sold</option>
           </select>
         </div>
+        <div class="field"><label>Total Price (₹)</label><input id="mTotal" type="number" min="0" placeholder="650000" /></div>
         <div class="field"><label>Location</label><input id="mLocation" placeholder="Block A" /></div>
         <div class="field"><label>Notes</label><input id="mNotes" placeholder="Near entrance" /></div>
         <div class="help">Owner assignment can be done using “Assign”.</div>
@@ -132,15 +149,18 @@ if (btnAddPlot) {
       onSave: () => {
         const plot = document.getElementById("mPlot").value.trim();
         const status = document.getElementById("mStatus").value;
+        const totalPrice = Number(document.getElementById("mTotal").value || 0);
         const location = document.getElementById("mLocation").value.trim();
         const notes = document.getElementById("mNotes").value.trim();
         if (!plot) return alert("Enter plot number");
+        if (!(totalPrice > 0)) return alert("Enter total price");
 
         plots.unshift({
           id: crypto.randomUUID(),
           plot,
           status,
           ownerUserId: null,
+          totalPrice,
           location: location || "Golden Valley",
           notes: notes || "-"
         });
@@ -175,14 +195,13 @@ if (btnAddUser) {
   });
 }
 
-// Export button exists only on dashboard/admin
 const btnExport = document.getElementById("btnExport");
 if (btnExport) {
   btnExport.addEventListener("click", () => {
-    const rows = [["Plot","Status","Owner","Phone","Location","Notes"]];
+    const rows = [["Plot","Status","Owner","Phone","TotalPrice","Location","Notes"]];
     plots.forEach(p => {
       const o = ownerInfo(p);
-      rows.push([p.plot, p.status, o?.name || "", o?.phone || "", p.location || "", p.notes || ""]);
+      rows.push([p.plot, p.status, o?.name || "", o?.phone || "", p.totalPrice || 0, p.location || "", p.notes || ""]);
     });
     downloadCsv("golden-valley-plots.csv", rows);
   });
@@ -190,7 +209,7 @@ if (btnExport) {
 
 if (elSearch) elSearch.addEventListener("input", renderPlots);
 
-// Actions (edit/assign/delete)
+// -------- actions (edit/assign/delete) --------
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-act]");
   if (!btn) return;
@@ -198,6 +217,8 @@ document.addEventListener("click", (e) => {
   const id = btn.dataset.id;
 
   if (act === "deletePlot") {
+    // also remove payments for that plot
+    payments = payments.filter(pay => pay.plotId !== id);
     plots = plots.filter(p => p.id !== id);
     renderAll();
   }
@@ -217,6 +238,7 @@ document.addEventListener("click", (e) => {
             <option ${p.status==="Sold"?"selected":""}>Sold</option>
           </select>
         </div>
+        <div class="field"><label>Total Price (₹)</label><input id="mTotal" type="number" min="0" value="${escapeAttr(String(p.totalPrice || 0))}" /></div>
         <div class="field"><label>Location</label><input id="mLocation" value="${escapeAttr(p.location || "")}" /></div>
         <div class="field"><label>Notes</label><input id="mNotes" value="${escapeAttr(p.notes || "")}" /></div>
         <div class="help">Owner assignment is managed via “Assign”.</div>
@@ -224,6 +246,7 @@ document.addEventListener("click", (e) => {
       onSave: () => {
         p.plot = document.getElementById("mPlot").value.trim() || p.plot;
         p.status = document.getElementById("mStatus").value;
+        p.totalPrice = Number(document.getElementById("mTotal").value || p.totalPrice || 0);
         p.location = document.getElementById("mLocation").value.trim() || p.location;
         p.notes = document.getElementById("mNotes").value.trim() || p.notes;
       }
@@ -248,7 +271,7 @@ document.addEventListener("click", (e) => {
         <div class="field"><label>Assign to user</label>
           <select id="mOwner">${options}</select>
         </div>
-        <div class="help">After login setup, users will only see plots assigned to them.</div>
+        <div class="help">Later (OTP + RLS): user will only see their assigned plots/payments.</div>
       `,
       onSave: () => {
         const owner = document.getElementById("mOwner").value || null;
@@ -283,7 +306,9 @@ document.addEventListener("click", (e) => {
   }
 
   if (act === "deleteUser") {
+    // unassign plots + remove payments for that user
     plots.forEach(p => { if (p.ownerUserId === id) p.ownerUserId = null; });
+    payments = payments.filter(pay => pay.userId !== id);
     users = users.filter(u => u.id !== id);
     renderAll();
   }
@@ -294,7 +319,7 @@ function renderAll() {
   renderUsers();
 }
 
-// Utilities
+// -------- utilities --------
 function downloadCsv(filename, rows) {
   const csv = rows.map(r => r.map(csvCell).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -310,8 +335,16 @@ function csvCell(v) {
   if (/[",\n]/.test(s)) return `"${s.replaceAll('"','""')}"`;
   return s;
 }
-function escapeHtml(s){ return String(s??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
-function escapeAttr(s){ return escapeHtml(s).replaceAll('"',"&quot;"); }
+
+function escapeHtml(s){
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;");
+}
+function escapeAttr(s){
+  return escapeHtml(s).replaceAll('"',"&quot;");
+}
 
 // Initial render (safe if tables don't exist on the page)
 renderAll();
