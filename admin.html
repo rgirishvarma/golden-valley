@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Golden Valley • Admin Portal</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">GV</div>
+      <div>
+        <div class="title">Golden Valley</div>
+        <div class="subtitle">Admin Portal</div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="btnExport">Export CSV</button>
+      <button class="btn" id="btnAddPlot">+ Add Plot</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="cardHeader">
+        <h2>Plots</h2>
+        <div class="searchRow">
+          <input id="plotSearch" class="input" placeholder="Search plots (e.g., A-101)" />
+        </div>
+      </div>
+      <div class="tableWrap">
+        <table class="table" id="plotsTable">
+          <thead>
+            <tr>
+              <th>Plot</th>
+              <th>Status</th>
+              <th>Owner</th>
+              <th>Phone</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody><!-- JS renders rows here --></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="cardHeader">
+        <h2>Users</h2>
+        <div class="actionsRow">
+          <button class="btn" id="btnAddUser">+ Add User</button>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table class="table" id="usersTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Assigned Plots</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody><!-- JS renders rows here --></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Simple modal -->
+  <div class="modal hidden" id="modal">
+    <div class="modalBox">
+      <div class="modalTitle" id="modalTitle">Modal</div>
+      <div id="modalBody"></div>
+      <div class="modalActions">
+        <button class="btn ghost" id="modalCancel">Cancel</button>
+        <button class="btn" id="modalOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="portal.js"></script>
+</body>
+</html>
