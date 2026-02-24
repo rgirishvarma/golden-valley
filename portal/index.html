@@ -21,6 +21,13 @@
         <a class="sbLink active" href="index.html">Dashboard</a>
         <a class="sbLink" href="plots.html">Plots</a>
         <a class="sbLink" href="users.html">Users</a>
+        <a class="sbLink" href="payments.html">Payments</a>
+        <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+
+        <a class="sbLink" href="user-home.html">User Home</a>
+        <a class="sbLink" href="user.html">My Plots</a>
+        <a class="sbLink" href="my-payments.html">My Payments</a>
+
         <a class="sbLink" href="admin.html">All-in-one (old)</a>
       </nav>
 
@@ -79,7 +86,6 @@
 
   <script src="portal.js"></script>
   <script>
-    // Dashboard mode: reuse the same demo data from portal.js
     const total = plots.length;
     const assigned = plots.filter(p => String(p.status).toLowerCase() === "assigned").length;
     const available = plots.filter(p => String(p.status).toLowerCase() === "available").length;
@@ -89,7 +95,6 @@
     document.getElementById("stAvailablePlots").textContent = available;
     document.getElementById("stUsers").textContent = users.length;
 
-    // render a simplified table
     const tbody = document.querySelector("#plotsTable tbody");
     tbody.innerHTML = plots.slice(0, 10).map(p => {
       const o = users.find(u => u.id === p.ownerUserId);
@@ -104,10 +109,10 @@
     }).join("");
 
     document.getElementById("btnExport").addEventListener("click", () => {
-      const rows = [["Plot","Status","Owner","Phone"]];
+      const rows = [["Plot","Status","Owner","Phone","TotalPrice","Location","Notes"]];
       plots.forEach(p => {
         const o = users.find(u => u.id === p.ownerUserId);
-        rows.push([p.plot, p.status, o?.name || "", o?.phone || ""]);
+        rows.push([p.plot, p.status, o?.name || "", o?.phone || "", p.totalPrice || 0, p.location || "", p.notes || ""]);
       });
       downloadCsv("golden-valley-plots.csv", rows);
     });
