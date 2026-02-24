@@ -9,52 +9,39 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <div class="sbBrand">
-        <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">Admin Portal</div>
-        </div>
-      </div>
+      <div class="sbBrand"><div class="sbLogo">GV</div><div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div></div>
       <nav class="sbNav">
         <a class="sbLink" href="index.html">Dashboard</a>
         <a class="sbLink" href="plots.html">Plots</a>
         <a class="sbLink active" href="users.html">Users</a>
         <a class="sbLink" href="payments.html">Payments</a>
         <a class="sbLink" href="payment-summary.html">Payment Summary</a>
-
-        <a class="sbLink" href="user-home.html">User Home</a>
-        <a class="sbLink" href="user.html">My Plots</a>
-        <a class="sbLink" href="my-payments.html">My Payments</a>
-
-        <a class="sbLink" href="admin.html">All-in-one (old)</a>
       </nav>
+      <div class="sbFoot"><button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button></div>
     </aside>
 
     <main class="main">
       <header class="pageTop">
-        <h1>Users</h1>
+        <h1>Users (Profiles)</h1>
         <div class="actions">
-          <button class="btn" id="btnAddUser">+ Add User</button>
+          <button class="btn" id="btnAdd">+ Add / Update User</button>
         </div>
       </header>
 
       <section class="card">
         <div class="tableWrap">
-          <table class="table" id="usersTable">
+          <table class="table" id="tbl">
             <thead>
-              <tr>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Role</th>
-                <th>Assigned Plots</th>
-                <th class="right">Actions</th>
-              </tr>
+              <tr><th>Name</th><th>Phone</th><th>Role</th><th>User UUID</th><th class="right">Actions</th></tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
+
+      <div class="help" style="margin-top:10px;">
+        To add a user: first create them in <b>Supabase → Authentication → Users</b> (or later via OTP), then copy their UUID and add profile here.
+      </div>
     </main>
   </div>
 
@@ -70,7 +57,100 @@
     </div>
   </div>
 
-  <script src="portal.js"></script>
-  <script> renderAll(); </script>
+  <script type="module">
+    import { requireRole, wireLogout } from "./auth.js";
+    import { listProfiles, upsertProfile, deleteProfile } from "./db.js";
+
+    await requireRole(["admin"]);
+    wireLogout();
+
+    const tbody = document.querySelector("#tbl tbody");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+    const modalCancel = document.getElementById("modalCancel");
+    const modalOk = document.getElementById("modalOk");
+
+    function openModal(title, bodyHtml, onSave){
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHtml;
+      modal.classList.remove("hidden");
+      modalOk.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
+      modalCancel.onclick = () => modal.classList.add("hidden");
+    }
+
+    let rows = [];
+    async function refresh(){
+      rows = await listProfiles();
+      tbody.innerHTML = rows.map(u => `
+        <tr>
+          <td><strong>${u.name||"-"}</strong></td>
+          <td>${u.phone||"-"}</td>
+          <td>${u.role}</td>
+          <td style="font-family:monospace; font-size:12px;">${u.id}</td>
+          <td class="right">
+            <button class="btn small ghost" data-act="edit" data-id="${u.id}">Edit</button>
+            <button class="btn small" data-act="del" data-id="${u.id}">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    document.getElementById("btnAdd").addEventListener("click", () => {
+      openModal("Add / Update User Profile", `
+        <div class="field"><label>User UUID (from Auth Users)</label><input id="mId" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" /></div>
+        <div class="field"><label>Name</label><input id="mName" /></div>
+        <div class="field"><label>Phone</label><input id="mPhone" placeholder="+91..." /></div>
+        <div class="field"><label>Role</label>
+          <select id="mRole"><option value="user">user</option><option value="admin">admin</option></select>
+        </div>
+      `, async () => {
+        const id = document.getElementById("mId").value.trim();
+        const name = document.getElementById("mName").value.trim();
+        const phone = document.getElementById("mPhone").value.trim();
+        const role = document.getElementById("mRole").value;
+        if (!id) return alert("Paste User UUID");
+        await upsertProfile({ id, name, phone, role });
+      });
+    });
+
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      const act = btn.dataset.act;
+      const u = rows.find(x => x.id === id);
+      if (!u) return;
+
+      if (act === "del"){
+        if (!confirm("Delete profile row? (Auth user stays)")) return;
+        await deleteProfile(id);
+        await refresh();
+      }
+
+      if (act === "edit"){
+        openModal("Edit User Profile", `
+          <div class="field"><label>User UUID</label><input id="mId" value="${u.id}" disabled /></div>
+          <div class="field"><label>Name</label><input id="mName" value="${u.name||""}" /></div>
+          <div class="field"><label>Phone</label><input id="mPhone" value="${u.phone||""}" /></div>
+          <div class="field"><label>Role</label>
+            <select id="mRole">
+              <option value="user" ${u.role==="user"?"selected":""}>user</option>
+              <option value="admin" ${u.role==="admin"?"selected":""}>admin</option>
+            </select>
+          </div>
+        `, async () => {
+          await upsertProfile({
+            id: u.id,
+            name: document.getElementById("mName").value.trim(),
+            phone: document.getElementById("mPhone").value.trim(),
+            role: document.getElementById("mRole").value,
+          });
+        });
+      }
+    });
+
+    await refresh();
+  </script>
 </body>
 </html>
