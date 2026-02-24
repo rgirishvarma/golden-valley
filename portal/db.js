@@ -1,9 +1,8 @@
 // portal/db.js
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
-// Use sessionStorage (NOT localStorage) for auth session.
-// This keeps login across refresh, but clears when browser/tab is closed.
+// Use sessionStorage (NOT localStorage) for session
 const storage = {
   getItem: (key) => sessionStorage.getItem(key),
   setItem: (key, value) => sessionStorage.setItem(key, value),
@@ -49,7 +48,7 @@ export async function signOut() {
   await supabase.auth.signOut();
 }
 
-// ---------- Profiles (Users management) ----------
+// ---------- Profiles ----------
 export async function listProfiles() {
   const { data, error } = await supabase
     .from("profiles")
@@ -60,7 +59,6 @@ export async function listProfiles() {
 }
 
 export async function upsertProfile(profile) {
-  // profile: {id, name, phone, role}
   const { data, error } = await supabase
     .from("profiles")
     .upsert(profile, { onConflict: "id" })
@@ -71,7 +69,6 @@ export async function upsertProfile(profile) {
 }
 
 export async function deleteProfile(id) {
-  // NOTE: This deletes only profile row (not auth user).
   const { error } = await supabase.from("profiles").delete().eq("id", id);
   if (error) throw error;
 }
@@ -87,7 +84,6 @@ export async function listPlots() {
 }
 
 export async function createPlot(plotRow) {
-  // plotRow: {plot,status,location,notes,total_price}
   const { data, error } = await supabase
     .from("plots")
     .insert(plotRow)
@@ -109,7 +105,6 @@ export async function updatePlot(id, patch) {
 }
 
 export async function deletePlot(id) {
-  // cascade takes care of assignments/payments because of FK cascade in your schema
   const { error } = await supabase.from("plots").delete().eq("id", id);
   if (error) throw error;
 }
@@ -124,13 +119,11 @@ export async function listAssignments() {
 }
 
 export async function assignPlot(user_id, plot_id) {
-  // 1) create assignment (upsert)
   const { error: e1 } = await supabase
     .from("plot_assignments")
     .upsert({ user_id, plot_id }, { onConflict: "user_id,plot_id" });
   if (e1) throw e1;
 
-  // 2) set plot status to Assigned
   await updatePlot(plot_id, { status: "Assigned" });
 }
 
@@ -142,7 +135,6 @@ export async function unassignPlot(user_id, plot_id) {
     .eq("plot_id", plot_id);
   if (error) throw error;
 
-  // If no assignments left for that plot, mark as Available
   const { data: remaining, error: e2 } = await supabase
     .from("plot_assignments")
     .select("plot_id")
@@ -165,7 +157,6 @@ export async function listPayments() {
 }
 
 export async function createPayment(row) {
-  // row: {user_id, plot_id, pay_date, amount, mode, note}
   const { data, error } = await supabase.from("payments").insert(row).select().single();
   if (error) throw error;
   return data;
