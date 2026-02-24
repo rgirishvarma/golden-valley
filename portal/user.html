@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Golden Valley • User Portal</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sbBrand">
+        <div class="sbLogo">GV</div>
+        <div>
+          <div class="sbTitle">Golden Valley</div>
+          <div class="sbSub">User Portal</div>
+        </div>
+      </div>
+
+      <nav class="sbNav">
+        <a class="sbLink" href="index.html">Admin Dashboard</a>
+        <a class="sbLink" href="plots.html">Admin Plots</a>
+        <a class="sbLink" href="users.html">Admin Users</a>
+        <a class="sbLink active" href="user.html">User Portal</a>
+      </nav>
+
+      <div class="sbFoot">
+        <div class="help">
+          Now: demo login by selecting user.<br/>
+          Later: OTP login will auto-detect user.
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="pageTop">
+        <h1>My Plots</h1>
+        <div class="actions">
+          <select id="userSelect" class="input" style="width:320px; max-width:75vw;"></select>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="cardHeader">
+          <h2>Assigned plot details</h2>
+        </div>
+        <div class="tableWrap">
+          <table class="table" id="myPlotsTable">
+            <thead>
+              <tr>
+                <th>Plot</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" style="margin-top:14px;">
+        <div class="cardHeader">
+          <h2>Quick summary</h2>
+        </div>
+        <div style="padding:14px; color: var(--muted);" id="summaryBox">Select a user to view assigned plots.</div>
+      </section>
+    </main>
+  </div>
+
+  <script src="portal.js"></script>
+  <script>
+    // --- Demo "user login" selection (until OTP login is implemented) ---
+    const userSelect = document.getElementById("userSelect");
+    const tbody = document.querySelector("#myPlotsTable tbody");
+    const summaryBox = document.getElementById("summaryBox");
+
+    // show only real users (not admins)
+    const portalUsers = users.filter(u => u.role !== "admin");
+
+    // build dropdown
+    userSelect.innerHTML = [
+      `<option value="">Select your phone number</option>`,
+      ...portalUsers.map(u => `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`)
+    ].join("");
+
+    function renderMyPlots(userId) {
+      if (!userId) {
+        tbody.innerHTML = "";
+        summaryBox.textContent = "Select a user to view assigned plots.";
+        return;
+      }
+
+      const u = users.find(x => x.id === userId);
+      const mine = plots.filter(p => p.ownerUserId === userId);
+
+      // If no plots assigned
+      if (mine.length === 0) {
+        tbody.innerHTML = "";
+        summaryBox.textContent = `${u?.name || "User"} has no assigned plots yet.`;
+        return;
+      }
+
+      // Render only their plots
+      tbody.innerHTML = mine.map(p => `
+        <tr>
+          <td><strong>${escapeHtml(p.plot)}</strong></td>
+          <td>${badgeForStatus(p.status)}</td>
+          <td>${escapeHtml(p.location || "Golden Valley")}</td>
+          <td>${escapeHtml(p.notes || "-")}</td>
+        </tr>
+      `).join("");
+
+      summaryBox.textContent = `${u?.name || "User"} • ${mine.length} plot(s) assigned`;
+    }
+
+    userSelect.addEventListener("change", () => renderMyPlots(userSelect.value));
+  </script>
+</body>
+</html>
