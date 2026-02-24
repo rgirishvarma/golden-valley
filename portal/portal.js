@@ -1,26 +1,78 @@
-// Admin/User Portal UI (no login yet). Data is temporary in-memory.
-// Later: Connect Supabase + OTP + RLS (users only see their plots/payments).
+// Golden Valley Portal (Demo data + Persistent storage)
+// NOTE: This uses localStorage ONLY to store portal DATA (plots/users/payments).
+// Login will be added later (OTP) WITHOUT localStorage if you want.
 
-let users = [
+const STORAGE_KEY = "gv_portal_v1";
+
+// -------------------- DEFAULT DATA --------------------
+const DEFAULT_USERS = [
   { id: "u1", name: "Admin", phone: "+91XXXXXXXXXX", role: "admin" },
   { id: "u2", name: "Ramesh", phone: "+91XXXXXXXXXX", role: "user" },
   { id: "u3", name: "Sita", phone: "+91XXXXXXXXXX", role: "user" },
 ];
 
-let plots = [
+const DEFAULT_PLOTS = [
   { id: "p1", plot: "A-101", status: "Available", ownerUserId: null, location: "Block A", notes: "Near entrance", totalPrice: 600000 },
   { id: "p2", plot: "A-102", status: "Assigned", ownerUserId: "u2", location: "Block A", notes: "Corner plot", totalPrice: 650000 },
   { id: "p3", plot: "B-201", status: "Assigned", ownerUserId: "u3", location: "Block B", notes: "East facing", totalPrice: 700000 },
 ];
 
-// Payments: linked to user + plot
-let payments = [
+const DEFAULT_PAYMENTS = [
   { id: "pay1", userId: "u2", plotId: "p2", date: "2026-02-10", amount: 50000, mode: "UPI", note: "Advance" },
   { id: "pay2", userId: "u2", plotId: "p2", date: "2026-02-18", amount: 25000, mode: "Cash", note: "Second payment" },
   { id: "pay3", userId: "u3", plotId: "p3", date: "2026-02-20", amount: 100000, mode: "Bank Transfer", note: "Booking" },
 ];
 
-// Elements (may not exist on all pages)
+// -------------------- STATE (will be replaced by storage) --------------------
+let users = [];
+let plots = [];
+let payments = [];
+
+// -------------------- STORAGE --------------------
+function saveState() {
+  const payload = { users, plots, payments, savedAt: new Date().toISOString() };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+
+    if (!data || !Array.isArray(data.users) || !Array.isArray(data.plots) || !Array.isArray(data.payments)) {
+      return false;
+    }
+
+    users = data.users;
+    plots = data.plots;
+    payments = data.payments;
+
+    // Small safety cleanup (avoid undefined fields)
+    plots.forEach(p => {
+      if (!("totalPrice" in p)) p.totalPrice = 0;
+      if (!("location" in p)) p.location = "Golden Valley";
+      if (!("notes" in p)) p.notes = "-";
+      if (!("ownerUserId" in p)) p.ownerUserId = null;
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resetToDefaults() {
+  users = structuredClone(DEFAULT_USERS);
+  plots = structuredClone(DEFAULT_PLOTS);
+  payments = structuredClone(DEFAULT_PAYMENTS);
+  saveState();
+}
+
+// Load at startup
+if (!loadState()) resetToDefaults();
+
+// -------------------- ELEMENTS (optional on each page) --------------------
 const elPlotsBody = document.querySelector("#plotsTable tbody");
 const elUsersBody = document.querySelector("#usersTable tbody");
 const elSearch = document.getElementById("plotSearch");
@@ -33,10 +85,9 @@ const modalOk = document.getElementById("modalOk");
 
 let modalOnSave = null;
 
-// -------- core helpers --------
+// -------------------- HELPERS --------------------
 function ownerInfo(plotRow) {
-  const u = users.find(x => x.id === plotRow.ownerUserId);
-  return u ? u : null;
+  return users.find(x => x.id === plotRow.ownerUserId) || null;
 }
 
 function badgeForStatus(status) {
@@ -47,18 +98,23 @@ function badgeForStatus(status) {
 }
 
 function formatDate(d) {
-  // accepts "YYYY-MM-DD" or Date
   if (!d) return "";
   if (typeof d === "string") return d;
   return new Date(d).toISOString().slice(0, 10);
 }
 
-// -------- render tables --------
+// money helper (some pages use it inline)
+function moneyINR(n){
+  const x = Number(n || 0);
+  return "₹" + x.toLocaleString("en-IN");
+}
+
+// -------------------- RENDER --------------------
 function renderPlots() {
   if (!elPlotsBody) return;
 
   const q = (elSearch?.value || "").trim().toLowerCase();
-  const filtered = plots.filter(p => p.plot.toLowerCase().includes(q));
+  const filtered = plots.filter(p => (p.plot || "").toLowerCase().includes(q));
 
   elPlotsBody.innerHTML = filtered.map(p => {
     const o = ownerInfo(p);
@@ -82,11 +138,7 @@ function renderUsers() {
   if (!elUsersBody) return;
 
   elUsersBody.innerHTML = users.map(u => {
-    const assigned = plots
-      .filter(p => p.ownerUserId === u.id)
-      .map(p => p.plot)
-      .join(", ");
-
+    const assigned = plots.filter(p => p.ownerUserId === u.id).map(p => p.plot).join(", ");
     return `
       <tr>
         <td><strong>${escapeHtml(u.name)}</strong></td>
@@ -102,7 +154,12 @@ function renderUsers() {
   }).join("");
 }
 
-// -------- modal --------
+function renderAll() {
+  renderPlots();
+  renderUsers();
+}
+
+// -------------------- MODAL --------------------
 function openModal({ title, bodyHtml, onSave }) {
   if (!modal) return;
   modalTitle.textContent = title;
@@ -123,10 +180,11 @@ if (modalCancel) modalCancel.addEventListener("click", closeModal);
 if (modalOk) modalOk.addEventListener("click", async () => {
   if (typeof modalOnSave === "function") await modalOnSave();
   closeModal();
+  saveState();       // ✅ persist
   renderAll();
 });
 
-// -------- buttons on pages --------
+// -------------------- BUTTONS --------------------
 const btnAddPlot = document.getElementById("btnAddPlot");
 if (btnAddPlot) {
   btnAddPlot.addEventListener("click", () => {
@@ -152,6 +210,7 @@ if (btnAddPlot) {
         const totalPrice = Number(document.getElementById("mTotal").value || 0);
         const location = document.getElementById("mLocation").value.trim();
         const notes = document.getElementById("mNotes").value.trim();
+
         if (!plot) return alert("Enter plot number");
         if (!(totalPrice > 0)) return alert("Enter total price");
 
@@ -189,12 +248,14 @@ if (btnAddUser) {
         const phone = document.getElementById("mPhone").value.trim();
         const role = document.getElementById("mRole").value;
         if (!name || !phone) return alert("Enter name and phone");
+
         users.unshift({ id: crypto.randomUUID(), name, phone, role });
       }
     });
   });
 }
 
+// Export plots CSV (dashboard button)
 const btnExport = document.getElementById("btnExport");
 if (btnExport) {
   btnExport.addEventListener("click", () => {
@@ -209,17 +270,18 @@ if (btnExport) {
 
 if (elSearch) elSearch.addEventListener("input", renderPlots);
 
-// -------- actions (edit/assign/delete) --------
+// -------------------- ACTIONS (edit/assign/delete) --------------------
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("button[data-act]");
   if (!btn) return;
+
   const act = btn.dataset.act;
   const id = btn.dataset.id;
 
   if (act === "deletePlot") {
-    // also remove payments for that plot
     payments = payments.filter(pay => pay.plotId !== id);
     plots = plots.filter(p => p.id !== id);
+    saveState();
     renderAll();
   }
 
@@ -238,7 +300,9 @@ document.addEventListener("click", (e) => {
             <option ${p.status==="Sold"?"selected":""}>Sold</option>
           </select>
         </div>
-        <div class="field"><label>Total Price (₹)</label><input id="mTotal" type="number" min="0" value="${escapeAttr(String(p.totalPrice || 0))}" /></div>
+        <div class="field"><label>Total Price (₹)</label>
+          <input id="mTotal" type="number" min="0" value="${escapeAttr(String(p.totalPrice || 0))}" />
+        </div>
         <div class="field"><label>Location</label><input id="mLocation" value="${escapeAttr(p.location || "")}" /></div>
         <div class="field"><label>Notes</label><input id="mNotes" value="${escapeAttr(p.notes || "")}" /></div>
         <div class="help">Owner assignment is managed via “Assign”.</div>
@@ -258,11 +322,9 @@ document.addEventListener("click", (e) => {
     if (!p) return;
 
     const options = [`<option value="">(No owner)</option>`].concat(
-      users
-        .filter(u => u.role !== "admin")
-        .map(u =>
-          `<option value="${u.id}" ${p.ownerUserId===u.id?"selected":""}>${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`
-        )
+      users.filter(u => u.role !== "admin").map(u =>
+        `<option value="${u.id}" ${p.ownerUserId===u.id?"selected":""}>${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`
+      )
     ).join("");
 
     openModal({
@@ -271,7 +333,7 @@ document.addEventListener("click", (e) => {
         <div class="field"><label>Assign to user</label>
           <select id="mOwner">${options}</select>
         </div>
-        <div class="help">Later (OTP + RLS): user will only see their assigned plots/payments.</div>
+        <div class="help">Later (OTP + RLS): user will only see their assigned plots/payments securely.</div>
       `,
       onSave: () => {
         const owner = document.getElementById("mOwner").value || null;
@@ -306,20 +368,72 @@ document.addEventListener("click", (e) => {
   }
 
   if (act === "deleteUser") {
-    // unassign plots + remove payments for that user
     plots.forEach(p => { if (p.ownerUserId === id) p.ownerUserId = null; });
     payments = payments.filter(pay => pay.userId !== id);
     users = users.filter(u => u.id !== id);
+    saveState();
     renderAll();
   }
 });
 
-function renderAll() {
-  renderPlots();
-  renderUsers();
+// -------------------- BACKUP IMPORT/EXPORT (optional but very useful) --------------------
+// If you want buttons, add these IDs to any page:
+// <button class="btn ghost" id="btnExportJSON">Export JSON</button>
+// <button class="btn ghost" id="btnImportJSON">Import JSON</button>
+// <button class="btn ghost" id="btnResetData">Reset Data</button>
+
+const btnExportJSON = document.getElementById("btnExportJSON");
+if (btnExportJSON) {
+  btnExportJSON.addEventListener("click", () => {
+    const payload = { users, plots, payments, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "golden-valley-backup.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  });
 }
 
-// -------- utilities --------
+const btnImportJSON = document.getElementById("btnImportJSON");
+if (btnImportJSON) {
+  btnImportJSON.addEventListener("click", async () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        if (!data || !Array.isArray(data.users) || !Array.isArray(data.plots) || !Array.isArray(data.payments)) {
+          return alert("Invalid backup file");
+        }
+        users = data.users;
+        plots = data.plots;
+        payments = data.payments;
+        saveState();
+        renderAll();
+        alert("Import completed ✅");
+      } catch {
+        alert("Import failed ❌");
+      }
+    };
+    input.click();
+  });
+}
+
+const btnResetData = document.getElementById("btnResetData");
+if (btnResetData) {
+  btnResetData.addEventListener("click", () => {
+    if (!confirm("Reset all portal data to defaults?")) return;
+    resetToDefaults();
+    renderAll();
+  });
+}
+
+// -------------------- UTILITIES --------------------
 function downloadCsv(filename, rows) {
   const csv = rows.map(r => r.map(csvCell).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -346,5 +460,16 @@ function escapeAttr(s){
   return escapeHtml(s).replaceAll('"',"&quot;");
 }
 
-// Initial render (safe if tables don't exist on the page)
+// Initial render
 renderAll();
+
+// Export state so other pages (user-home, payment-summary) can use it
+window.users = users;
+window.plots = plots;
+window.payments = payments;
+window.badgeForStatus = badgeForStatus;
+window.escapeHtml = escapeHtml;
+window.formatDate = formatDate;
+window.downloadCsv = downloadCsv;
+window.moneyINR = moneyINR;
+window.openModal = openModal;
