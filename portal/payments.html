@@ -22,7 +22,11 @@
         <a class="sbLink" href="plots.html">Plots</a>
         <a class="sbLink" href="users.html">Users</a>
         <a class="sbLink active" href="payments.html">Payments</a>
-        <a class="sbLink" href="user.html">User Portal</a>
+        <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+
+        <a class="sbLink" href="user-home.html">User Home</a>
+        <a class="sbLink" href="user.html">My Plots</a>
+        <a class="sbLink" href="my-payments.html">My Payments</a>
       </nav>
     </aside>
 
@@ -78,7 +82,6 @@
 
   <script src="portal.js"></script>
   <script>
-    // render table
     const tbody = document.querySelector("#paymentsTable tbody");
     const search = document.getElementById("paySearch");
 
@@ -115,7 +118,6 @@
       `).join("");
     }
 
-    // add payment
     document.getElementById("btnAddPayment").addEventListener("click", () => {
       const userOpts = users.filter(u => u.role !== "admin")
         .map(u => `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`).join("");
@@ -149,7 +151,6 @@
           <div class="field"><label>Note</label>
             <input id="mPayNote" placeholder="Advance payment" />
           </div>
-          <div class="help">Later: we will attach receipt upload.</div>
         `,
         onSave: () => {
           const userId = document.getElementById("mPayUser").value;
@@ -167,7 +168,6 @@
       });
     });
 
-    // delete payment
     document.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act='deletePayment']");
       if (!btn) return;
@@ -176,7 +176,6 @@
       renderPayments();
     });
 
-    // export csv
     document.getElementById("btnExportPayments").addEventListener("click", () => {
       const rows = [["Date","User","Phone","Plot","Amount","Mode","Note"]];
       payments.forEach(p => {
