@@ -34,16 +34,32 @@
 
     <main class="main">
       <header class="pageTop">
-        <h1>My Plots</h1>
+        <h1>My Assigned Plots</h1>
         <div class="actions">
           <select id="userSelect" class="input" style="width:320px; max-width:75vw;"></select>
         </div>
       </header>
 
+      <section class="grid2" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="stat">
+          <div class="statLabel">User</div>
+          <div class="statValue" style="font-size:18px" id="stUser">-</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Assigned plots</div>
+          <div class="statValue" id="stCount">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Status</div>
+          <div class="statValue" style="font-size:18px" id="stStatus">-</div>
+        </div>
+      </section>
+
       <section class="card">
         <div class="cardHeader">
-          <h2>Assigned plot details</h2>
+          <h2>Plot details</h2>
         </div>
+
         <div class="tableWrap">
           <table class="table" id="myPlotsTable">
             <thead>
@@ -61,47 +77,67 @@
 
       <section class="card" style="margin-top:14px;">
         <div class="cardHeader">
-          <h2>Quick summary</h2>
+          <h2>Message</h2>
         </div>
-        <div style="padding:14px; color: var(--muted);" id="summaryBox">Select a user to view assigned plots.</div>
+        <div style="padding:14px; color: var(--muted);" id="msgBox">
+          Select your phone number to view assigned plots.
+        </div>
       </section>
+
+      <div style="margin-top:14px; color: var(--muted); font-size:12px;">
+        🔒 Later (after OTP login): the user will automatically see only their plots (database security).
+      </div>
     </main>
   </div>
 
   <script src="portal.js"></script>
   <script>
-    // --- Demo "user login" selection (until OTP login is implemented) ---
+    // Demo "user login" (until OTP login is implemented):
+    // user selects their phone/name -> only assigned plots are shown.
+
     const userSelect = document.getElementById("userSelect");
     const tbody = document.querySelector("#myPlotsTable tbody");
-    const summaryBox = document.getElementById("summaryBox");
+    const msgBox = document.getElementById("msgBox");
 
-    // show only real users (not admins)
+    const stUser = document.getElementById("stUser");
+    const stCount = document.getElementById("stCount");
+    const stStatus = document.getElementById("stStatus");
+
+    // show only normal users (not admin)
     const portalUsers = users.filter(u => u.role !== "admin");
 
-    // build dropdown
+    // dropdown options
     userSelect.innerHTML = [
       `<option value="">Select your phone number</option>`,
-      ...portalUsers.map(u => `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`)
+      ...portalUsers.map(u =>
+        `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`
+      )
     ].join("");
 
     function renderMyPlots(userId) {
       if (!userId) {
         tbody.innerHTML = "";
-        summaryBox.textContent = "Select a user to view assigned plots.";
+        msgBox.textContent = "Select your phone number to view assigned plots.";
+        stUser.textContent = "-";
+        stCount.textContent = "0";
+        stStatus.textContent = "-";
         return;
       }
 
       const u = users.find(x => x.id === userId);
       const mine = plots.filter(p => p.ownerUserId === userId);
 
-      // If no plots assigned
+      stUser.textContent = u ? `${u.name} (${u.phone})` : "-";
+      stCount.textContent = String(mine.length);
+
       if (mine.length === 0) {
         tbody.innerHTML = "";
-        summaryBox.textContent = `${u?.name || "User"} has no assigned plots yet.`;
+        msgBox.textContent = `${u?.name || "User"} has no assigned plots yet. Please contact admin.`;
+        stStatus.textContent = "No plots";
         return;
       }
 
-      // Render only their plots
+      // show rows for only the assigned plots
       tbody.innerHTML = mine.map(p => `
         <tr>
           <td><strong>${escapeHtml(p.plot)}</strong></td>
@@ -111,7 +147,12 @@
         </tr>
       `).join("");
 
-      summaryBox.textContent = `${u?.name || "User"} • ${mine.length} plot(s) assigned`;
+      // status summary
+      const hasAssigned = mine.some(p => String(p.status).toLowerCase() === "assigned");
+      const hasSold = mine.some(p => String(p.status).toLowerCase() === "sold");
+      stStatus.textContent = hasSold ? "Includes sold plot(s)" : (hasAssigned ? "Assigned" : "Available");
+
+      msgBox.textContent = `Showing ${mine.length} plot(s) assigned to ${u?.name || "user"}.`;
     }
 
     userSelect.addEventListener("change", () => renderMyPlots(userSelect.value));
