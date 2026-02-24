@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Golden Valley • Plots</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sbBrand">
+        <div class="sbLogo">GV</div>
+        <div>
+          <div class="sbTitle">Golden Valley</div>
+          <div class="sbSub">Admin Portal</div>
+        </div>
+      </div>
+      <nav class="sbNav">
+        <a class="sbLink" href="index.html">Dashboard</a>
+        <a class="sbLink active" href="plots.html">Plots</a>
+        <a class="sbLink" href="users.html">Users</a>
+        <a class="sbLink" href="admin.html">All-in-one (old)</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="pageTop">
+        <h1>Plots</h1>
+        <div class="actions">
+          <input id="plotSearch" class="input" placeholder="Search plots (e.g., A-101)" />
+          <button class="btn" id="btnAddPlot">+ Add Plot</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="tableWrap">
+          <table class="table" id="plotsTable">
+            <thead>
+              <tr>
+                <th>Plot</th>
+                <th>Status</th>
+                <th>Owner</th>
+                <th>Phone</th>
+                <th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- modal -->
+  <div class="modal hidden" id="modal">
+    <div class="modalBox">
+      <div class="modalTitle" id="modalTitle">Modal</div>
+      <div id="modalBody"></div>
+      <div class="modalActions">
+        <button class="btn ghost" id="modalCancel">Cancel</button>
+        <button class="btn" id="modalOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="portal.js"></script>
+  <script>
+    // Reuse existing portal.js render functions by calling renderAll()
+    renderAll();
+  </script>
+</body>
+</html>

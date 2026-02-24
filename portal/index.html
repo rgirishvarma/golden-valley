@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Golden Valley • Portal</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sbBrand">
+        <div class="sbLogo">GV</div>
+        <div>
+          <div class="sbTitle">Golden Valley</div>
+          <div class="sbSub">Admin Portal</div>
+        </div>
+      </div>
+
+      <nav class="sbNav">
+        <a class="sbLink active" href="index.html">Dashboard</a>
+        <a class="sbLink" href="plots.html">Plots</a>
+        <a class="sbLink" href="users.html">Users</a>
+        <a class="sbLink" href="admin.html">All-in-one (old)</a>
+      </nav>
+
+      <div class="sbFoot">
+        <div class="help">Login will be added later (OTP).</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="pageTop">
+        <h1>Dashboard</h1>
+        <div class="actions">
+          <button class="btn ghost" id="btnExport">Export CSV</button>
+        </div>
+      </header>
+
+      <section class="grid2">
+        <div class="stat">
+          <div class="statLabel">Total plots</div>
+          <div class="statValue" id="stTotalPlots">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Assigned plots</div>
+          <div class="statValue" id="stAssignedPlots">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Available plots</div>
+          <div class="statValue" id="stAvailablePlots">0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Users</div>
+          <div class="statValue" id="stUsers">0</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="cardHeader">
+          <h2>Recent plot list</h2>
+        </div>
+        <div class="tableWrap">
+          <table class="table" id="plotsTable">
+            <thead>
+              <tr>
+                <th>Plot</th>
+                <th>Status</th>
+                <th>Owner</th>
+                <th>Phone</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="portal.js"></script>
+  <script>
+    // Dashboard mode: reuse the same demo data from portal.js
+    const total = plots.length;
+    const assigned = plots.filter(p => String(p.status).toLowerCase() === "assigned").length;
+    const available = plots.filter(p => String(p.status).toLowerCase() === "available").length;
+
+    document.getElementById("stTotalPlots").textContent = total;
+    document.getElementById("stAssignedPlots").textContent = assigned;
+    document.getElementById("stAvailablePlots").textContent = available;
+    document.getElementById("stUsers").textContent = users.length;
+
+    // render a simplified table
+    const tbody = document.querySelector("#plotsTable tbody");
+    tbody.innerHTML = plots.slice(0, 10).map(p => {
+      const o = users.find(u => u.id === p.ownerUserId);
+      return `
+        <tr>
+          <td><strong>${escapeHtml(p.plot)}</strong></td>
+          <td>${badgeForStatus(p.status)}</td>
+          <td>${o ? escapeHtml(o.name) : "-"}</td>
+          <td>${o ? escapeHtml(o.phone) : "-"}</td>
+        </tr>
+      `;
+    }).join("");
+
+    document.getElementById("btnExport").addEventListener("click", () => {
+      const rows = [["Plot","Status","Owner","Phone"]];
+      plots.forEach(p => {
+        const o = users.find(u => u.id === p.ownerUserId);
+        rows.push([p.plot, p.status, o?.name || "", o?.phone || ""]);
+      });
+      downloadCsv("golden-valley-plots.csv", rows);
+    });
+  </script>
+</body>
+</html>
