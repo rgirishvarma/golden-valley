@@ -21,8 +21,10 @@
         <a class="sbLink" href="index.html">Admin Dashboard</a>
         <a class="sbLink" href="plots.html">Admin Plots</a>
         <a class="sbLink" href="users.html">Admin Users</a>
+        <a class="sbLink" href="payments.html">Admin Payments</a>
 
-        <a class="sbLink" href="user.html">User Portal</a>
+        <a class="sbLink" href="user-home.html">User Home</a>
+        <a class="sbLink" href="user.html">My Plots</a>
         <a class="sbLink active" href="my-payments.html">My Payments</a>
       </nav>
 
@@ -124,7 +126,6 @@
     const plotSummaryBody = document.querySelector("#plotSummaryTable tbody");
     const paymentBody = document.querySelector("#paymentTable tbody");
 
-    // normal users only
     const portalUsers = users.filter(u => u.role !== "admin");
 
     userSelect.innerHTML = [
@@ -169,7 +170,6 @@
         return;
       }
 
-      // Plot summary + totals
       let totalPrice = 0;
       let totalPaid = 0;
 
@@ -180,14 +180,13 @@
         totalPrice += price;
         totalPaid += paid;
 
-        const statusText = String(pl.status || "");
         return `
           <tr>
             <td><strong>${escapeHtml(pl.plot)}</strong></td>
             <td class="right">${money(price)}</td>
             <td class="right">${money(paid)}</td>
             <td class="right">${money(bal)}</td>
-            <td>${badgeForStatus(statusText)}</td>
+            <td>${badgeForStatus(String(pl.status || ""))}</td>
           </tr>
         `;
       });
@@ -200,7 +199,6 @@
 
       plotSummaryBody.innerHTML = rows.join("");
 
-      // Payment history (only this user's payments)
       const myPays = payments
         .filter(p => p.userId === userId)
         .slice()
