@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Golden Valley • Payments</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sbBrand">
+        <div class="sbLogo">GV</div>
+        <div>
+          <div class="sbTitle">Golden Valley</div>
+          <div class="sbSub">Admin Portal</div>
+        </div>
+      </div>
+
+      <nav class="sbNav">
+        <a class="sbLink" href="index.html">Dashboard</a>
+        <a class="sbLink" href="plots.html">Plots</a>
+        <a class="sbLink" href="users.html">Users</a>
+        <a class="sbLink active" href="payments.html">Payments</a>
+        <a class="sbLink" href="user.html">User Portal</a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="pageTop">
+        <h1>Payments</h1>
+        <div class="actions">
+          <button class="btn" id="btnAddPayment">+ Add Payment</button>
+          <button class="btn ghost" id="btnExportPayments">Export CSV</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="cardHeader">
+          <h2>All payments</h2>
+          <div class="searchRow">
+            <input id="paySearch" class="input" placeholder="Search by plot / name / phone" />
+          </div>
+        </div>
+
+        <div class="tableWrap">
+          <table class="table" id="paymentsTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>User</th>
+                <th>Phone</th>
+                <th>Plot</th>
+                <th class="right">Amount</th>
+                <th>Mode</th>
+                <th>Note</th>
+                <th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- modal -->
+  <div class="modal hidden" id="modal">
+    <div class="modalBox">
+      <div class="modalTitle" id="modalTitle">Modal</div>
+      <div id="modalBody"></div>
+      <div class="modalActions">
+        <button class="btn ghost" id="modalCancel">Cancel</button>
+        <button class="btn" id="modalOk">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="portal.js"></script>
+  <script>
+    // render table
+    const tbody = document.querySelector("#paymentsTable tbody");
+    const search = document.getElementById("paySearch");
+
+    function renderPayments() {
+      const q = (search.value || "").trim().toLowerCase();
+
+      const rows = payments
+        .map(p => {
+          const u = users.find(x => x.id === p.userId);
+          const pl = plots.find(x => x.id === p.plotId);
+          return { p, u, pl };
+        })
+        .filter(x => {
+          const name = (x.u?.name || "").toLowerCase();
+          const phone = (x.u?.phone || "").toLowerCase();
+          const plot = (x.pl?.plot || "").toLowerCase();
+          return (name + " " + phone + " " + plot).includes(q);
+        })
+        .sort((a,b) => new Date(b.p.date) - new Date(a.p.date));
+
+      tbody.innerHTML = rows.map(x => `
+        <tr>
+          <td>${escapeHtml(formatDate(x.p.date))}</td>
+          <td>${escapeHtml(x.u?.name || "-")}</td>
+          <td>${escapeHtml(x.u?.phone || "-")}</td>
+          <td><strong>${escapeHtml(x.pl?.plot || "-")}</strong></td>
+          <td class="right">₹${escapeHtml(String(x.p.amount))}</td>
+          <td>${escapeHtml(x.p.mode || "-")}</td>
+          <td>${escapeHtml(x.p.note || "-")}</td>
+          <td class="right">
+            <button class="btn small" data-act="deletePayment" data-id="${x.p.id}">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+    }
+
+    // add payment
+    document.getElementById("btnAddPayment").addEventListener("click", () => {
+      const userOpts = users.filter(u => u.role !== "admin")
+        .map(u => `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`).join("");
+
+      const plotOpts = plots
+        .map(pl => `<option value="${pl.id}">${escapeHtml(pl.plot)}</option>`).join("");
+
+      openModal({
+        title: "Add Payment",
+        bodyHtml: `
+          <div class="field"><label>User</label>
+            <select id="mPayUser">${userOpts}</select>
+          </div>
+          <div class="field"><label>Plot</label>
+            <select id="mPayPlot">${plotOpts}</select>
+          </div>
+          <div class="field"><label>Date</label>
+            <input id="mPayDate" type="date" />
+          </div>
+          <div class="field"><label>Amount (₹)</label>
+            <input id="mPayAmt" type="number" min="0" placeholder="10000" />
+          </div>
+          <div class="field"><label>Mode</label>
+            <select id="mPayMode">
+              <option>Cash</option>
+              <option>UPI</option>
+              <option>Bank Transfer</option>
+              <option>Cheque</option>
+            </select>
+          </div>
+          <div class="field"><label>Note</label>
+            <input id="mPayNote" placeholder="Advance payment" />
+          </div>
+          <div class="help">Later: we will attach receipt upload.</div>
+        `,
+        onSave: () => {
+          const userId = document.getElementById("mPayUser").value;
+          const plotId = document.getElementById("mPayPlot").value;
+          const date = document.getElementById("mPayDate").value || new Date().toISOString().slice(0,10);
+          const amount = Number(document.getElementById("mPayAmt").value || 0);
+          const mode = document.getElementById("mPayMode").value;
+          const note = document.getElementById("mPayNote").value.trim();
+
+          if (!userId || !plotId) return alert("Select user and plot");
+          if (!(amount > 0)) return alert("Enter amount");
+
+          payments.unshift({ id: crypto.randomUUID(), userId, plotId, date, amount, mode, note });
+        }
+      });
+    });
+
+    // delete payment
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act='deletePayment']");
+      if (!btn) return;
+      const id = btn.dataset.id;
+      payments = payments.filter(p => p.id !== id);
+      renderPayments();
+    });
+
+    // export csv
+    document.getElementById("btnExportPayments").addEventListener("click", () => {
+      const rows = [["Date","User","Phone","Plot","Amount","Mode","Note"]];
+      payments.forEach(p => {
+        const u = users.find(x => x.id === p.userId);
+        const pl = plots.find(x => x.id === p.plotId);
+        rows.push([formatDate(p.date), u?.name||"", u?.phone||"", pl?.plot||"", p.amount, p.mode||"", p.note||""]);
+      });
+      downloadCsv("golden-valley-payments.csv", rows);
+    });
+
+    search.addEventListener("input", renderPayments);
+    renderPayments();
+  </script>
+</body>
+</html>
