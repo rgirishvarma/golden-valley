@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Golden Valley • User Home</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
@@ -11,13 +11,17 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">User Portal</div></div>
+        <div>
+          <div class="sbTitle">Golden Valley</div>
+          <div class="sbSub">User Portal</div>
+        </div>
       </div>
 
       <nav class="sbNav">
         <a class="sbLink active" href="user-home.html">User Home</a>
         <a class="sbLink" href="user.html">My Plots</a>
         <a class="sbLink" href="my-payments.html">My Payments</a>
+        <a class="sbLink" href="profile.html">Profile</a>
       </nav>
 
       <div class="sbFoot">
@@ -27,38 +31,32 @@
 
     <main class="main">
       <header class="pageTop">
-        <h1>User Home</h1>
+        <h1>User Dashboard</h1>
         <div class="actions" id="who"></div>
       </header>
 
       <section class="grid2" style="grid-template-columns: repeat(4, 1fr);">
-        <div class="stat"><div class="statLabel">Assigned plots</div><div class="statValue" id="stPlots">0</div></div>
+        <div class="stat"><div class="statLabel">Assigned Plots</div><div class="statValue" id="stPlots">0</div></div>
         <div class="stat"><div class="statLabel">Total Price</div><div class="statValue" id="stTotal">₹0</div></div>
         <div class="stat"><div class="statLabel">Total Paid</div><div class="statValue" id="stPaid">₹0</div></div>
         <div class="stat"><div class="statLabel">Remaining</div><div class="statValue" id="stBal">₹0</div></div>
       </section>
 
       <section class="card">
-        <div class="cardHeader"><h2>My plots</h2></div>
+        <div class="cardHeader"><h2>My Plots</h2></div>
         <div class="tableWrap">
-          <table class="table" id="tblPlots">
+          <table class="table">
             <thead>
               <tr>
-                <th>Plot</th><th>Status</th><th>Location</th>
-                <th class="right">Total</th><th class="right">Paid</th><th class="right">Balance</th>
+                <th>Plot</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th class="right">Total</th>
+                <th class="right">Paid</th>
+                <th class="right">Balance</th>
               </tr>
             </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="card" style="margin-top:14px;">
-        <div class="cardHeader"><h2>Recent payments</h2></div>
-        <div class="tableWrap">
-          <table class="table" id="tblPays">
-            <thead><tr><th>Date</th><th>Plot</th><th class="right">Amount</th><th>Mode</th><th>Note</th></tr></thead>
-            <tbody></tbody>
+            <tbody id="plotBody"></tbody>
           </table>
         </div>
       </section>
@@ -67,33 +65,35 @@
 
   <script type="module">
     import { requireRole, wireLogout } from "./auth.js";
-    import { listPlots, listPayments, listAssignments, listProfiles } from "./db.js";
+    import { listPlots, listPayments } from "./db.js";
 
     const { profile } = await requireRole(["user","admin"]);
     wireLogout();
 
-    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
-    const who = document.getElementById("who");
-    who.textContent = `${profile.name || "User"} (${profile.phone || ""})`;
-
-    let plots = await listPlots();      // RLS returns only assigned plots for user
-    let pays  = await listPayments();   // RLS returns only own payments for user
-
-    // If admin opens user-home, show admin’s own (maybe none). That’s fine.
-
-    const tbodyPlots = document.querySelector("#tblPlots tbody");
-    const tbodyPays  = document.querySelector("#tblPays tbody");
-
-    function paidForPlot(plotId){
-      return pays.filter(p => p.plot_id === plotId).reduce((s,p)=>s+Number(p.amount||0),0);
+    if (profile.role === "admin") {
+      window.location.href = "./index.html";
     }
 
-    let totalPrice=0, totalPaid=0;
+    document.getElementById("who").textContent = profile.name || "User";
 
-    tbodyPlots.innerHTML = plots.map(pl => {
-      const price = Number(pl.total_price||0);
-      const paid = paidForPlot(pl.id);
+    const plots = await listPlots();      // RLS: only assigned
+    const payments = await listPayments(); // RLS: only own
+
+    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+
+    const tbody = document.getElementById("plotBody");
+
+    let totalPrice = 0;
+    let totalPaid = 0;
+
+    tbody.innerHTML = plots.map(pl => {
+      const price = Number(pl.total_price || 0);
+      const paid = payments
+        .filter(p => p.plot_id === pl.id)
+        .reduce((s,p)=> s + Number(p.amount||0), 0);
+
       const bal = Math.max(price - paid, 0);
+
       totalPrice += price;
       totalPaid += paid;
 
@@ -109,24 +109,10 @@
       `;
     }).join("");
 
-    document.getElementById("stPlots").textContent = String(plots.length);
+    document.getElementById("stPlots").textContent = plots.length;
     document.getElementById("stTotal").textContent = money(totalPrice);
-    document.getElementById("stPaid").textContent  = money(totalPaid);
-    document.getElementById("stBal").textContent   = money(Math.max(totalPrice-totalPaid,0));
-
-    const paysSorted = pays.slice().sort((a,b)=> new Date(b.pay_date) - new Date(a.pay_date)).slice(0,10);
-    tbodyPays.innerHTML = paysSorted.map(p => {
-      const pl = plots.find(x => x.id === p.plot_id);
-      return `
-        <tr>
-          <td>${p.pay_date}</td>
-          <td><strong>${pl?.plot || "-"}</strong></td>
-          <td class="right">${money(p.amount)}</td>
-          <td>${p.mode || "-"}</td>
-          <td>${p.note || "-"}</td>
-        </tr>
-      `;
-    }).join("");
+    document.getElementById("stPaid").textContent = money(totalPaid);
+    document.getElementById("stBal").textContent = money(totalPrice - totalPaid);
   </script>
 </body>
 </html>
