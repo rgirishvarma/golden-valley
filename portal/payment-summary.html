@@ -1,9 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • Payment Summary</title>
+  <title>Payment Summary</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
@@ -11,7 +10,10 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
+        <div>
+          <div class="sbTitle">Golden Valley</div>
+          <div class="sbSub">Admin Portal</div>
+        </div>
       </div>
 
       <nav class="sbNav">
@@ -20,6 +22,7 @@
         <a class="sbLink" href="users.html">Users</a>
         <a class="sbLink" href="payments.html">Payments</a>
         <a class="sbLink active" href="payment-summary.html">Payment Summary</a>
+        <a class="sbLink" href="installment-plans.html">Installment Plans</a>
       </nav>
 
       <div class="sbFoot">
@@ -29,30 +32,23 @@
 
     <main class="main">
       <header class="pageTop">
-        <h1>Payment Summary (Per Plot)</h1>
-        <div class="actions">
-          <input id="q" class="input" placeholder="Search plot / owner / phone" />
-          <button class="btn ghost" id="btnExport">Export CSV</button>
-        </div>
+        <h1>Payment Summary</h1>
       </header>
 
-      <section class="grid2" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="stat"><div class="statLabel">Total Price</div><div class="statValue" id="stTotal">₹0</div></div>
-        <div class="stat"><div class="statLabel">Total Paid</div><div class="statValue" id="stPaid">₹0</div></div>
-        <div class="stat"><div class="statLabel">Total Balance</div><div class="statValue" id="stBal">₹0</div></div>
-      </section>
-
       <section class="card">
-        <div class="cardHeader"><h2>All plots summary</h2></div>
         <div class="tableWrap">
-          <table class="table" id="tbl">
+          <table class="table">
             <thead>
               <tr>
-                <th>Plot</th><th>Status</th><th>Owner</th><th>Phone</th>
-                <th class="right">Total Price</th><th class="right">Paid</th><th class="right">Balance</th>
+                <th>Plot</th>
+                <th>User</th>
+                <th class="right">Total Price</th>
+                <th class="right">Paid</th>
+                <th class="right">Balance</th>
+                <th class="right">WhatsApp</th>
               </tr>
             </thead>
-            <tbody></tbody>
+            <tbody id="tbody"></tbody>
           </table>
         </div>
       </section>
@@ -61,101 +57,67 @@
 
   <script type="module">
     import { requireRole, wireLogout } from "./auth.js";
-    import { listPlots, listProfiles, listAssignments, listPayments } from "./db.js";
+    import { listPlots, listPayments, listProfiles } from "./db.js";
 
     await requireRole(["admin"]);
     wireLogout();
 
-    const q = document.getElementById("q");
-    const tbody = document.querySelector("#tbl tbody");
-
-    const stTotal = document.getElementById("stTotal");
-    const stPaid = document.getElementById("stPaid");
-    const stBal = document.getElementById("stBal");
+    const [plots, payments, users] = await Promise.all([
+      listPlots(),
+      listPayments(),
+      listProfiles()
+    ]);
 
     function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-    let plots=[], profiles=[], assigns=[], pays=[];
-    async function refresh(){
-      [plots, profiles, assigns, pays] = await Promise.all([
-        listPlots(), listProfiles(), listAssignments(), listPayments()
-      ]);
-      render();
-    }
+    const rows = plots.map(pl => {
+      const owner = users.find(u => u.id === pl.owner_id);
+      const total = Number(pl.total_price || 0);
+      const paid = payments
+        .filter(p => p.plot_id === pl.id)
+        .reduce((s,p)=> s + Number(p.amount||0), 0);
+      const bal = Math.max(total - paid, 0);
 
-    function ownerForPlot(plotId){
-      const a = assigns.find(x => x.plot_id === plotId);
-      if (!a) return null;
-      return profiles.find(p => p.id === a.user_id) || null;
-    }
-
-    function paidForPlot(plotId){
-      return pays.filter(p => p.plot_id === plotId).reduce((s,p)=> s + Number(p.amount||0), 0);
-    }
-
-    function render(){
-      const s = (q.value||"").trim().toLowerCase();
-
-      let totalPrice = 0;
-      let totalPaid = 0;
-
-      const rows = plots.map(pl => {
-        const owner = ownerForPlot(pl.id);
-        const price = Number(pl.total_price||0);
-        const paid = paidForPlot(pl.id);
-        const bal = Math.max(price - paid, 0);
-
-        totalPrice += price;
-        totalPaid += paid;
-
-        const txt = `${pl.plot} ${owner?.name||""} ${owner?.phone||""}`.toLowerCase();
-        return { pl, owner, price, paid, bal, txt };
-      }).filter(r => r.txt.includes(s))
-        .sort((a,b) => (a.pl.plot||"").localeCompare(b.pl.plot||""));
-
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td><strong>${r.pl.plot}</strong></td>
-          <td>${r.pl.status}</td>
-          <td>${r.owner?.name || "-"}</td>
-          <td>${r.owner?.phone || "-"}</td>
-          <td class="right">${money(r.price)}</td>
-          <td class="right">${money(r.paid)}</td>
-          <td class="right">${money(r.bal)}</td>
-        </tr>
-      `).join("");
-
-      stTotal.textContent = money(totalPrice);
-      stPaid.textContent = money(totalPaid);
-      stBal.textContent = money(Math.max(totalPrice - totalPaid, 0));
-    }
-
-    q.addEventListener("input", render);
-
-    document.getElementById("btnExport").addEventListener("click", () => {
-      const rows = [["Plot","Status","Owner","Phone","TotalPrice","Paid","Balance"]];
-      plots.forEach(pl => {
-        const owner = ownerForPlot(pl.id);
-        const price = Number(pl.total_price||0);
-        const paid = paidForPlot(pl.id);
-        const bal = Math.max(price - paid, 0);
-        rows.push([pl.plot, pl.status, owner?.name||"", owner?.phone||"", price, paid, bal]);
-      });
-
-      const csv = rows.map(r => r.map(v => {
-        const s = String(v ?? "");
-        return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
-      }).join(",")).join("\n");
-
-      const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "golden-valley-payment-summary.csv";
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
+      return { pl, owner, total, paid, bal };
     });
 
-    await refresh();
+    const tbody = document.getElementById("tbody");
+
+    tbody.innerHTML = rows.map(r => `
+      <tr>
+        <td><strong>${r.pl.plot}</strong></td>
+        <td>${r.owner?.name || "-"}<br><small>${r.owner?.phone || ""}</small></td>
+        <td class="right">${money(r.total)}</td>
+        <td class="right">${money(r.paid)}</td>
+        <td class="right">${money(r.bal)}</td>
+        <td class="right">
+          ${r.owner?.phone ? `
+            <button class="btn small ghost"
+              data-phone="${r.owner.phone}"
+              data-plot="${r.pl.plot}"
+              data-bal="${r.bal}">
+              WhatsApp
+            </button>
+          ` : "-"}
+        </td>
+      </tr>
+    `).join("");
+
+    // WhatsApp handler
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-phone]");
+      if (!btn) return;
+
+      const phone = btn.dataset.phone.replace("+","");
+      const plot = btn.dataset.plot;
+      const bal = btn.dataset.bal;
+
+      const message = encodeURIComponent(
+        `Golden Valley Payment Reminder:\n\nPlot: ${plot}\nRemaining Balance: ₹${Number(bal).toLocaleString("en-IN")}\n\nPlease complete your payment.\nThank you.`
+      );
+
+      window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+    });
   </script>
 </body>
 </html>
