@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • User Portal</title>
+  <title>Golden Valley • My Plots</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
@@ -11,148 +11,57 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">User Portal</div>
-        </div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">User Portal</div></div>
       </div>
 
       <nav class="sbNav">
-        <a class="sbLink" href="index.html">Admin Dashboard</a>
-        <a class="sbLink" href="plots.html">Admin Plots</a>
-        <a class="sbLink" href="users.html">Admin Users</a>
-        <a class="sbLink" href="payments.html">Admin Payments</a>
-
         <a class="sbLink" href="user-home.html">User Home</a>
         <a class="sbLink active" href="user.html">My Plots</a>
         <a class="sbLink" href="my-payments.html">My Payments</a>
       </nav>
 
       <div class="sbFoot">
-        <div class="help">
-          Now: demo login by selecting user.<br/>
-          Later: OTP login will auto-detect user.
-        </div>
+        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
       </div>
     </aside>
 
     <main class="main">
       <header class="pageTop">
         <h1>My Assigned Plots</h1>
-        <div class="actions">
-          <select id="userSelect" class="input" style="width:320px; max-width:75vw;"></select>
-        </div>
+        <div class="actions" id="who"></div>
       </header>
 
-      <section class="grid2" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="stat">
-          <div class="statLabel">User</div>
-          <div class="statValue" style="font-size:18px" id="stUser">-</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Assigned plots</div>
-          <div class="statValue" id="stCount">0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Status</div>
-          <div class="statValue" style="font-size:18px" id="stStatus">-</div>
-        </div>
-      </section>
-
       <section class="card">
-        <div class="cardHeader">
-          <h2>Plot details</h2>
-        </div>
-
+        <div class="cardHeader"><h2>Plot details</h2></div>
         <div class="tableWrap">
-          <table class="table" id="myPlotsTable">
-            <thead>
-              <tr>
-                <th>Plot</th>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
+          <table class="table" id="tbl">
+            <thead><tr><th>Plot</th><th>Status</th><th>Location</th><th>Notes</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
-      <section class="card" style="margin-top:14px;">
-        <div class="cardHeader">
-          <h2>Message</h2>
-        </div>
-        <div style="padding:14px; color: var(--muted);" id="msgBox">
-          Select your phone number to view assigned plots.
-        </div>
-      </section>
-
-      <div style="margin-top:14px; color: var(--muted); font-size:12px;">
-        🔒 Later (after OTP login): user will automatically see only their plots + payments (database security).
-      </div>
     </main>
   </div>
 
-  <script src="portal.js"></script>
-  <script>
-    const userSelect = document.getElementById("userSelect");
-    const tbody = document.querySelector("#myPlotsTable tbody");
-    const msgBox = document.getElementById("msgBox");
+  <script type="module">
+    import { requireRole, wireLogout } from "./auth.js";
+    import { listPlots } from "./db.js";
 
-    const stUser = document.getElementById("stUser");
-    const stCount = document.getElementById("stCount");
-    const stStatus = document.getElementById("stStatus");
+    const { profile } = await requireRole(["user","admin"]);
+    wireLogout();
+    document.getElementById("who").textContent = `${profile.name || "User"} (${profile.phone || ""})`;
 
-    const portalUsers = users.filter(u => u.role !== "admin");
+    const plots = await listPlots(); // RLS returns only assigned plots
+    const tbody = document.querySelector("#tbl tbody");
 
-    userSelect.innerHTML = [
-      `<option value="">Select your phone number</option>`,
-      ...portalUsers.map(u =>
-        `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`
-      )
-    ].join("");
-
-    function renderMyPlots(userId) {
-      if (!userId) {
-        tbody.innerHTML = "";
-        msgBox.textContent = "Select your phone number to view assigned plots.";
-        stUser.textContent = "-";
-        stCount.textContent = "0";
-        stStatus.textContent = "-";
-        return;
-      }
-
-      const u = users.find(x => x.id === userId);
-      const mine = plots.filter(p => p.ownerUserId === userId);
-
-      stUser.textContent = u ? `${u.name} (${u.phone})` : "-";
-      stCount.textContent = String(mine.length);
-
-      if (mine.length === 0) {
-        tbody.innerHTML = "";
-        msgBox.textContent = `${u?.name || "User"} has no assigned plots yet. Please contact admin.`;
-        stStatus.textContent = "No plots";
-        return;
-      }
-
-      tbody.innerHTML = mine.map(p => `
-        <tr>
-          <td><strong>${escapeHtml(p.plot)}</strong></td>
-          <td>${badgeForStatus(p.status)}</td>
-          <td>${escapeHtml(p.location || "Golden Valley")}</td>
-          <td>${escapeHtml(p.notes || "-")}</td>
-        </tr>
-      `).join("");
-
-      const hasAssigned = mine.some(p => String(p.status).toLowerCase() === "assigned");
-      const hasSold = mine.some(p => String(p.status).toLowerCase() === "sold");
-      stStatus.textContent = hasSold ? "Includes sold plot(s)" : (hasAssigned ? "Assigned" : "Available");
-
-      msgBox.textContent = `Showing ${mine.length} plot(s) assigned to ${u?.name || "user"}.`;
-    }
-
-    userSelect.addEventListener("change", () => renderMyPlots(userSelect.value));
+    tbody.innerHTML = plots.map(p => `
+      <tr>
+        <td><strong>${p.plot}</strong></td>
+        <td>${p.status}</td>
+        <td>${p.location || "-"}</td>
+        <td>${p.notes || "-"}</td>
+      </tr>
+    `).join("");
   </script>
 </body>
 </html>
