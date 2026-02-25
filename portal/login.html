@@ -3,59 +3,135 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • Login</title>
+  <title>Golden Valley • Login (OTP)</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
   <main class="container" style="max-width:520px;">
     <section class="card" style="margin-top:40px;">
       <div class="cardHeader">
-        <h2>Portal Login</h2>
+        <h2>Login with OTP</h2>
       </div>
+
       <div style="padding:14px; display:grid; gap:10px;">
-        <div class="field">
-          <label>Email</label>
-          <input id="email" class="input" style="width:100%;" placeholder="admin@email.com" />
-        </div>
-        <div class="field">
-          <label>Password</label>
-          <input id="password" type="password" class="input" style="width:100%;" placeholder="••••••••" />
-        </div>
-
-        <button class="btn" id="btnLogin" style="width:100%;">Login</button>
-        <div class="help" id="msg"></div>
-
         <div class="help">
-          OTP login will be added later. For now use email/password created in Supabase Auth.
+          Enter your phone with country code.<br/>
+          Example: <b>+919912799455</b>
         </div>
+
+        <div class="field">
+          <label>Phone</label>
+          <input id="phone" class="input" style="width:100%;" placeholder="+91XXXXXXXXXX" />
+        </div>
+
+        <button class="btn" id="btnSend" style="width:100%;">Send OTP</button>
+
+        <div class="field" id="otpBox" style="display:none;">
+          <label>OTP</label>
+          <input id="otp" class="input" style="width:100%;" placeholder="Enter OTP" />
+        </div>
+
+        <button class="btn" id="btnVerify" style="width:100%; display:none;">Verify OTP</button>
+
+        <button class="btn ghost" id="btnResend" style="width:100%; display:none;">Resend OTP</button>
+
+        <div class="help" id="msg"></div>
       </div>
     </section>
   </main>
 
   <script type="module">
-    import { signInWithEmail, getMyProfile } from "./db.js";
+    import { supabase } from "./db.js";
+    import { getMyProfile } from "./db.js";
 
-    const email = document.getElementById("email");
-    const password = document.getElementById("password");
+    const phoneEl = document.getElementById("phone");
+    const otpEl = document.getElementById("otp");
     const msg = document.getElementById("msg");
 
-    document.getElementById("btnLogin").addEventListener("click", async () => {
-      msg.textContent = "";
-      try {
-        await signInWithEmail(email.value.trim(), password.value);
-        const profile = await getMyProfile();
+    const otpBox = document.getElementById("otpBox");
+    const btnSend = document.getElementById("btnSend");
+    const btnVerify = document.getElementById("btnVerify");
+    const btnResend = document.getElementById("btnResend");
 
+    function setMsg(t){ msg.textContent = t || ""; }
+
+    function normalizePhone(p){
+      return (p || "").trim();
+    }
+
+    async function sendOtp() {
+      setMsg("");
+      const phone = normalizePhone(phoneEl.value);
+      if (!phone.startsWith("+") || phone.length < 10) {
+        setMsg("Enter phone with country code, like +91XXXXXXXXXX");
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        phone,
+        options: { shouldCreateUser: true }
+      });
+
+      if (error) {
+        setMsg(error.message || "OTP send failed");
+        return;
+      }
+
+      otpBox.style.display = "block";
+      btnVerify.style.display = "block";
+      btnResend.style.display = "block";
+      setMsg("OTP sent ✅ Please check SMS.");
+      otpEl.focus();
+    }
+
+    async function verifyOtp() {
+      setMsg("");
+      const phone = normalizePhone(phoneEl.value);
+      const token = (otpEl.value || "").trim();
+
+      if (!token) {
+        setMsg("Enter OTP");
+        return;
+      }
+
+      const { data, error } = await supabase.auth.verifyOtp({
+        phone,
+        token,
+        type: "sms"
+      });
+
+      if (error) {
+        setMsg(error.message || "OTP verification failed");
+        return;
+      }
+
+      // After login, profile must exist (trigger creates it for new users)
+      try {
+        const profile = await getMyProfile();
         if (!profile) {
-          msg.textContent = "No profile row found. Ask admin to create your profile.";
+          setMsg("Profile not found. Contact admin.");
           return;
         }
 
         // Redirect by role
         window.location.replace(profile.role === "admin" ? "./index.html" : "./user-home.html");
       } catch (e) {
-        msg.textContent = e?.message || "Login failed";
+        setMsg(e?.message || "Login error");
       }
-    });
+    }
+
+    btnSend.addEventListener("click", sendOtp);
+    btnResend.addEventListener("click", sendOtp);
+    btnVerify.addEventListener("click", verifyOtp);
+
+    // If already logged in, redirect immediately
+    const { data: u } = await supabase.auth.getUser();
+    if (u?.user) {
+      try {
+        const profile = await getMyProfile();
+        window.location.replace(profile?.role === "admin" ? "./index.html" : "./user-home.html");
+      } catch {}
+    }
   </script>
 </body>
 </html>
