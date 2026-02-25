@@ -167,5 +167,30 @@ export async function deletePayment(id) {
   if (error) throw error;
 }
 
+// ---------- Installment Plans ----------
+export async function listInstallmentPlans() {
+  const { data, error } = await supabase
+    .from("installment_plans")
+    .select("id,user_id,plot_id,start_date,frequency,installments_count,installment_amount,created_at")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data;
+}
+
+export async function upsertInstallmentPlan(row) {
+  // row: { user_id, plot_id, start_date, frequency, installments_count, installment_amount }
+  const { data, error } = await supabase
+    .from("installment_plans")
+    .upsert(row, { onConflict: "user_id,plot_id" })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteInstallmentPlan(id) {
+  const { error } = await supabase.from("installment_plans").delete().eq("id", id);
+  if (error) throw error;
+}
 
 
