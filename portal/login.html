@@ -33,9 +33,33 @@
             <input id="password" type="password" class="input" />
           </div>
 
-          <button class="btn" id="btnEmailLogin" style="width:100%;">
-            Login with Email
-          </button>
+          <button class="btn" id="btnEmailLogin" style="width:100%;">Login with Email</button>
+
+          <!-- Link phone section (only after email login) -->
+          <div id="linkPhoneSection" style="display:none; border-top:1px solid #eee; padding-top:10px; margin-top:10px;">
+            <div class="help" style="color:#555;">
+              ✅ Logged in successfully. Now you can link a phone number for OTP login (users only).
+            </div>
+
+            <div class="field">
+              <label>Phone (+country code)</label>
+              <input id="linkPhone" class="input" placeholder="+91XXXXXXXXXX" />
+            </div>
+
+            <button class="btn ghost" id="btnSendLinkOtp" style="width:100%;">Send Link OTP</button>
+
+            <div id="linkOtpArea" style="display:none;">
+              <div class="field">
+                <label>Enter OTP</label>
+                <input id="linkOtp" class="input" />
+              </div>
+              <button class="btn ghost" id="btnVerifyLinkOtp" style="width:100%;">Verify & Link Phone</button>
+            </div>
+
+            <div class="help" style="font-size:13px;color:#666;">
+              Note: Admin is locked to Email login only. Phone linking is only for user accounts.
+            </div>
+          </div>
         </div>
 
         <!-- PHONE OTP LOGIN -->
@@ -45,9 +69,7 @@
             <input id="phone" class="input" placeholder="+91XXXXXXXXXX" />
           </div>
 
-          <button class="btn" id="btnSendOtp" style="width:100%;">
-            Send OTP
-          </button>
+          <button class="btn" id="btnSendOtp" style="width:100%;">Send OTP</button>
 
           <div id="otpArea" style="display:none;">
             <div class="field">
@@ -55,19 +77,15 @@
               <input id="otp" class="input" />
             </div>
 
-            <button class="btn" id="btnVerifyOtp" style="width:100%;">
-              Verify OTP
-            </button>
+            <button class="btn" id="btnVerifyOtp" style="width:100%;">Verify OTP</button>
           </div>
 
           <div class="help" style="font-size:13px;color:#666;">
-            ⚠ If OTP says <b>“Signups not allowed for otp”</b>,  
-            please login once with Email and link your phone.
+            ⚠ If you see <b>“Signups not allowed for otp”</b>, login with Email once and link phone.
           </div>
         </div>
 
         <div class="help" id="msg" style="color:#c0392b;"></div>
-
       </div>
     </section>
   </main>
@@ -80,6 +98,9 @@
     const emailBox = document.getElementById("emailBox");
     const phoneBox = document.getElementById("phoneBox");
     const otpArea = document.getElementById("otpArea");
+
+    const linkSection = document.getElementById("linkPhoneSection");
+    const linkOtpArea = document.getElementById("linkOtpArea");
 
     function setMsg(t){ msg.textContent = t || ""; }
 
@@ -97,6 +118,23 @@
       setMsg("");
     };
 
+    // Redirect based on role
+    async function redirectAfterLogin() {
+      const profile = await getMyProfile();
+
+      if (!profile) {
+        setMsg("Profile not found. Contact admin.");
+        return;
+      }
+
+      if (profile.role === "admin") {
+        // Admin locked to email-only login (still can be signed-in via email)
+        window.location.href = "./index.html";
+      } else {
+        window.location.href = "./user-home.html";
+      }
+    }
+
     // EMAIL LOGIN
     document.getElementById("btnEmailLogin").onclick = async () => {
       setMsg("");
@@ -104,37 +142,51 @@
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         setMsg(error.message);
         return;
       }
 
-      redirectAfterLogin();
-    };
+      const profile = await getMyProfile();
 
-    // SEND OTP
-    document.getElementById("btnSendOtp").onclick = async () => {
-      setMsg("");
-      const phone = document.getElementById("phone").value.trim();
-
-      if (!phone.startsWith("+")) {
-        setMsg("Use format +91XXXXXXXXXX");
+      if (!profile) {
+        setMsg("Profile not found. Contact admin.");
         return;
       }
 
+      // If admin -> go directly
+      if (profile.role === "admin") {
+        window.location.href = "./index.html";
+        return;
+      }
+
+      // If user -> show link phone section + also allow redirect to user-home
+      linkSection.style.display = "block";
+      setMsg("Logged in ✅ You can link phone for OTP, or continue to dashboard.");
+
+      // Optional auto redirect after 2 seconds:
+      setTimeout(() => {
+        window.location.href = "./user-home.html";
+      }, 1500);
+    };
+
+    // PHONE OTP SEND (BLOCK admin)
+    document.getElementById("btnSendOtp").onclick = async () => {
+      setMsg("");
+      const phone = document.getElementById("phone").value.trim();
+      if (!phone.startsWith("+")) return setMsg("Use format +91XXXXXXXXXX");
+
+      // Try OTP send (no auto create)
       const { error } = await supabase.auth.signInWithOtp({
         phone,
-        options: { shouldCreateUser: false } // important
+        options: { shouldCreateUser: false }
       });
 
       if (error) {
         if (error.message.includes("Signups not allowed")) {
-          setMsg("Phone not linked to any account. Please login with Email once and link your phone.");
+          setMsg("This phone is not linked. Please login with Email once and link phone using the Link Phone option.");
         } else {
           setMsg(error.message);
         }
@@ -145,45 +197,70 @@
       setMsg("OTP sent ✅");
     };
 
-    // VERIFY OTP
+    // PHONE OTP VERIFY (BLOCK admin after verify)
     document.getElementById("btnVerifyOtp").onclick = async () => {
       setMsg("");
       const phone = document.getElementById("phone").value.trim();
       const token = document.getElementById("otp").value.trim();
 
+      const { error } = await supabase.auth.verifyOtp({ phone, token, type: "sms" });
+      if (error) return setMsg(error.message);
+
+      const profile = await getMyProfile();
+      if (!profile) return setMsg("Profile not found. Contact admin.");
+
+      // Admin locked: if somehow admin phone OTP tries, force logout and show message
+      if (profile.role === "admin") {
+        await supabase.auth.signOut();
+        setMsg("Admin is locked to Email login only.");
+        return;
+      }
+
+      window.location.href = "./user-home.html";
+    };
+
+    // LINK PHONE - SEND OTP (only when user is logged in with email)
+    document.getElementById("btnSendLinkOtp").onclick = async () => {
+      setMsg("");
+      const phone = document.getElementById("linkPhone").value.trim();
+      if (!phone.startsWith("+")) return setMsg("Use format +91XXXXXXXXXX");
+
+      // Ensure currently logged in user is USER (not admin)
+      const profile = await getMyProfile();
+      if (!profile) return setMsg("Profile not found.");
+      if (profile.role === "admin") return setMsg("Admin cannot link phone. Admin is email-only.");
+
+      const { error } = await supabase.auth.updateUser({ phone });
+      if (error) return setMsg(error.message);
+
+      linkOtpArea.style.display = "block";
+      setMsg("Link OTP sent ✅ Enter OTP to verify.");
+    };
+
+    // LINK PHONE - VERIFY OTP
+    document.getElementById("btnVerifyLinkOtp").onclick = async () => {
+      setMsg("");
+      const phone = document.getElementById("linkPhone").value.trim();
+      const token = document.getElementById("linkOtp").value.trim();
+      if (!token) return setMsg("Enter OTP");
+
       const { error } = await supabase.auth.verifyOtp({
         phone,
         token,
-        type: "sms"
+        type: "phone_change"
       });
 
-      if (error) {
-        setMsg(error.message);
-        return;
-      }
+      if (error) return setMsg(error.message);
 
-      redirectAfterLogin();
+      setMsg("Phone linked ✅ Now you can login next time using Mobile OTP.");
     };
 
-    async function redirectAfterLogin() {
-      const profile = await getMyProfile();
-
-      if (!profile) {
-        setMsg("Profile not found. Contact admin.");
-        return;
-      }
-
-      if (profile.role === "admin") {
-        window.location.href = "./index.html";
-      } else {
-        window.location.href = "./user-home.html";
-      }
-    }
-
-    // If already logged in
+    // If already logged in, redirect properly
     const { data } = await supabase.auth.getUser();
     if (data.user) {
-      redirectAfterLogin();
+      const profile = await getMyProfile();
+      if (profile?.role === "admin") window.location.href = "./index.html";
+      if (profile?.role === "user") window.location.href = "./user-home.html";
     }
   </script>
 </body>
