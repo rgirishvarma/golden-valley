@@ -104,7 +104,7 @@
 
       const { error } = await supabase.auth.signInWithOtp({
         phone,
-        options: { shouldCreateUser: true }
+        options: { shouldCreateUser: false }
       });
 
       if (error) {
@@ -159,3 +159,4 @@
   </script>
 </body>
 </html>
+
