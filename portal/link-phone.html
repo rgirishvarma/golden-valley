@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Link Phone</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <main class="container" style="max-width:520px;margin-top:40px;">
+    <section class="card">
+      <div class="cardHeader"><h2>Link Phone to Current Account</h2></div>
+      <div style="padding:14px;display:grid;gap:10px;">
+        <div class="help">Login with Email first, then link phone here.</div>
+
+        <div class="field">
+          <label>Phone (+country code)</label>
+          <input id="phone" class="input" placeholder="+91XXXXXXXXXX" />
+        </div>
+
+        <button class="btn" id="btnSend" style="width:100%;">Send Verify SMS</button>
+
+        <div id="otpBox" style="display:none;">
+          <div class="field">
+            <label>OTP</label>
+            <input id="otp" class="input" placeholder="Enter OTP" />
+          </div>
+          <button class="btn" id="btnVerify" style="width:100%;">Verify & Link</button>
+        </div>
+
+        <div class="help" id="msg"></div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { supabase } from "./db.js";
+
+    const msg = document.getElementById("msg");
+    const phoneEl = document.getElementById("phone");
+    const otpEl = document.getElementById("otp");
+    const otpBox = document.getElementById("otpBox");
+
+    function setMsg(t){ msg.textContent = t || ""; }
+
+    document.getElementById("btnSend").onclick = async () => {
+      setMsg("");
+      const phone = phoneEl.value.trim();
+      if (!phone.startsWith("+")) return setMsg("Use format +91XXXXXXXXXX");
+
+      // IMPORTANT: This links phone to the currently logged-in user
+      const { data, error } = await supabase.auth.updateUser({ phone });
+
+      if (error) return setMsg(error.message);
+      otpBox.style.display = "block";
+      setMsg("OTP sent for phone linking ✅");
+    };
+
+    document.getElementById("btnVerify").onclick = async () => {
+      setMsg("");
+      const phone = phoneEl.value.trim();
+      const token = otpEl.value.trim();
+      if (!token) return setMsg("Enter OTP");
+
+      // IMPORTANT: phone_change links phone to existing user
+      const { error } = await supabase.auth.verifyOtp({
+        phone,
+        token,
+        type: "phone_change"
+      });
+
+      if (error) return setMsg(error.message);
+
+      setMsg("Phone linked ✅ Now you can login with Mobile OTP.");
+    };
+
+    // Must be logged in
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      setMsg("You are not logged in. Please login with Email first.");
+    }
+  </script>
+</body>
+</html>
