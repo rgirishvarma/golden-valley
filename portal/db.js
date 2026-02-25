@@ -4,9 +4,9 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./config.js";
 
 // Use sessionStorage (NOT localStorage) for session
 const storage = {
-  getItem: (key) => sessionStorage.getItem(key),
-  setItem: (key, value) => sessionStorage.setItem(key, value),
-  removeItem: (key) => sessionStorage.removeItem(key),
+  getItem: (key) => localStorage.getItem(key),
+  setItem: (key, value) => localStorage.setItem(key, value),
+  removeItem: (key) => localStorage.removeItem(key),
 };
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -166,5 +166,6 @@ export async function deletePayment(id) {
   const { error } = await supabase.from("payments").delete().eq("id", id);
   if (error) throw error;
 }
+
 
 
