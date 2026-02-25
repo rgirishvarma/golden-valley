@@ -11,216 +11,109 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">User Portal</div>
-        </div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">User Portal</div></div>
       </div>
 
       <nav class="sbNav">
-        <a class="sbLink" href="index.html">Admin Dashboard</a>
-        <a class="sbLink" href="plots.html">Admin Plots</a>
-        <a class="sbLink" href="users.html">Admin Users</a>
-        <a class="sbLink" href="payments.html">Admin Payments</a>
-
         <a class="sbLink" href="user-home.html">User Home</a>
         <a class="sbLink" href="user.html">My Plots</a>
         <a class="sbLink active" href="my-payments.html">My Payments</a>
       </nav>
 
       <div class="sbFoot">
-        <div class="help">
-          Now: demo login by selecting user.<br/>
-          Later: OTP login will auto-detect user.
-        </div>
+        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
       </div>
     </aside>
 
     <main class="main">
       <header class="pageTop">
         <h1>My Payments</h1>
-        <div class="actions">
-          <select id="userSelect" class="input" style="width:320px; max-width:75vw;"></select>
-        </div>
+        <div class="actions" id="who"></div>
       </header>
 
       <section class="grid2" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="stat">
-          <div class="statLabel">Total Price</div>
-          <div class="statValue" id="stTotalPrice">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Total Paid</div>
-          <div class="statValue" id="stPaid">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Remaining Balance</div>
-          <div class="statValue" id="stBalance">₹0</div>
-        </div>
+        <div class="stat"><div class="statLabel">Total Price</div><div class="statValue" id="stTotal">₹0</div></div>
+        <div class="stat"><div class="statLabel">Total Paid</div><div class="statValue" id="stPaid">₹0</div></div>
+        <div class="stat"><div class="statLabel">Remaining</div><div class="statValue" id="stBal">₹0</div></div>
       </section>
 
       <section class="card">
-        <div class="cardHeader">
-          <h2>My assigned plots summary</h2>
-        </div>
+        <div class="cardHeader"><h2>My plots summary</h2></div>
         <div class="tableWrap">
-          <table class="table" id="plotSummaryTable">
-            <thead>
-              <tr>
-                <th>Plot</th>
-                <th class="right">Total Price</th>
-                <th class="right">Paid</th>
-                <th class="right">Balance</th>
-                <th>Status</th>
-              </tr>
-            </thead>
+          <table class="table" id="tblSum">
+            <thead><tr><th>Plot</th><th class="right">Total</th><th class="right">Paid</th><th class="right">Balance</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
 
       <section class="card" style="margin-top:14px;">
-        <div class="cardHeader">
-          <h2>Payment history</h2>
-        </div>
+        <div class="cardHeader"><h2>Payment history</h2></div>
         <div class="tableWrap">
-          <table class="table" id="paymentTable">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Plot</th>
-                <th class="right">Amount</th>
-                <th>Mode</th>
-                <th>Note</th>
-              </tr>
-            </thead>
+          <table class="table" id="tblPays">
+            <thead><tr><th>Date</th><th>Plot</th><th class="right">Amount</th><th>Mode</th><th>Note</th></tr></thead>
             <tbody></tbody>
           </table>
         </div>
       </section>
-
-      <section class="card" style="margin-top:14px;">
-        <div class="cardHeader">
-          <h2>Message</h2>
-        </div>
-        <div style="padding:14px; color: var(--muted);" id="msgBox">
-          Select your phone number to view your payments.
-        </div>
-      </section>
-
-      <div style="margin-top:14px; color: var(--muted); font-size:12px;">
-        🔒 Later (OTP + RLS): user will only see their own plots & payments from the database.
-      </div>
     </main>
   </div>
 
-  <script src="portal.js"></script>
-  <script>
-    const userSelect = document.getElementById("userSelect");
-    const msgBox = document.getElementById("msgBox");
+  <script type="module">
+    import { requireRole, wireLogout } from "./auth.js";
+    import { listPlots, listPayments } from "./db.js";
 
-    const stTotalPrice = document.getElementById("stTotalPrice");
-    const stPaid = document.getElementById("stPaid");
-    const stBalance = document.getElementById("stBalance");
+    const { profile } = await requireRole(["user","admin"]);
+    wireLogout();
+    document.getElementById("who").textContent = `${profile.name || "User"} (${profile.phone || ""})`;
 
-    const plotSummaryBody = document.querySelector("#plotSummaryTable tbody");
-    const paymentBody = document.querySelector("#paymentTable tbody");
+    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-    const portalUsers = users.filter(u => u.role !== "admin");
+    const plots = await listPlots();     // RLS: only assigned
+    const pays  = await listPayments();  // RLS: only own
 
-    userSelect.innerHTML = [
-      `<option value="">Select your phone number</option>`,
-      ...portalUsers.map(u =>
-        `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`
-      )
-    ].join("");
+    const sumBody = document.querySelector("#tblSum tbody");
+    const payBody = document.querySelector("#tblPays tbody");
 
-    function money(n) {
-      const x = Number(n || 0);
-      return "₹" + x.toLocaleString("en-IN");
+    function paidForPlot(plotId){
+      return pays.filter(p => p.plot_id === plotId).reduce((s,p)=> s + Number(p.amount||0),0);
     }
 
-    function calcPaidForPlot(userId, plotId) {
-      return payments
-        .filter(p => p.userId === userId && p.plotId === plotId)
-        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
-    }
+    let totalPrice=0, totalPaid=0;
 
-    function render(userId) {
-      if (!userId) {
-        msgBox.textContent = "Select your phone number to view your payments.";
-        stTotalPrice.textContent = money(0);
-        stPaid.textContent = money(0);
-        stBalance.textContent = money(0);
-        plotSummaryBody.innerHTML = "";
-        paymentBody.innerHTML = "";
-        return;
-      }
+    sumBody.innerHTML = plots.map(pl => {
+      const price = Number(pl.total_price||0);
+      const paid = paidForPlot(pl.id);
+      const bal = Math.max(price - paid, 0);
+      totalPrice += price;
+      totalPaid += paid;
+      return `
+        <tr>
+          <td><strong>${pl.plot}</strong></td>
+          <td class="right">${money(price)}</td>
+          <td class="right">${money(paid)}</td>
+          <td class="right">${money(bal)}</td>
+        </tr>
+      `;
+    }).join("");
 
-      const u = users.find(x => x.id === userId);
-      const myPlots = plots.filter(pl => pl.ownerUserId === userId);
+    document.getElementById("stTotal").textContent = money(totalPrice);
+    document.getElementById("stPaid").textContent  = money(totalPaid);
+    document.getElementById("stBal").textContent   = money(Math.max(totalPrice-totalPaid,0));
 
-      if (myPlots.length === 0) {
-        msgBox.textContent = `${u?.name || "User"} has no assigned plots yet. Please contact admin.`;
-        stTotalPrice.textContent = money(0);
-        stPaid.textContent = money(0);
-        stBalance.textContent = money(0);
-        plotSummaryBody.innerHTML = "";
-        paymentBody.innerHTML = "";
-        return;
-      }
-
-      let totalPrice = 0;
-      let totalPaid = 0;
-
-      const rows = myPlots.map(pl => {
-        const price = Number(pl.totalPrice || 0);
-        const paid = calcPaidForPlot(userId, pl.id);
-        const bal = Math.max(price - paid, 0);
-        totalPrice += price;
-        totalPaid += paid;
-
-        return `
-          <tr>
-            <td><strong>${escapeHtml(pl.plot)}</strong></td>
-            <td class="right">${money(price)}</td>
-            <td class="right">${money(paid)}</td>
-            <td class="right">${money(bal)}</td>
-            <td>${badgeForStatus(String(pl.status || ""))}</td>
-          </tr>
-        `;
-      });
-
-      const totalBal = Math.max(totalPrice - totalPaid, 0);
-
-      stTotalPrice.textContent = money(totalPrice);
-      stPaid.textContent = money(totalPaid);
-      stBalance.textContent = money(totalBal);
-
-      plotSummaryBody.innerHTML = rows.join("");
-
-      const myPays = payments
-        .filter(p => p.userId === userId)
-        .slice()
-        .sort((a,b) => new Date(b.date) - new Date(a.date));
-
-      paymentBody.innerHTML = myPays.map(p => {
-        const pl = plots.find(x => x.id === p.plotId);
-        return `
-          <tr>
-            <td>${escapeHtml(formatDate(p.date))}</td>
-            <td><strong>${escapeHtml(pl?.plot || "-")}</strong></td>
-            <td class="right">${money(p.amount)}</td>
-            <td>${escapeHtml(p.mode || "-")}</td>
-            <td>${escapeHtml(p.note || "-")}</td>
-          </tr>
-        `;
-      }).join("");
-
-      msgBox.textContent = `Showing plots and payments for ${u?.name || "user"}.`;
-    }
-
-    userSelect.addEventListener("change", () => render(userSelect.value));
+    const paysSorted = pays.slice().sort((a,b)=> new Date(b.pay_date) - new Date(a.pay_date));
+    payBody.innerHTML = paysSorted.map(p => {
+      const pl = plots.find(x => x.id === p.plot_id);
+      return `
+        <tr>
+          <td>${p.pay_date}</td>
+          <td><strong>${pl?.plot || "-"}</strong></td>
+          <td class="right">${money(p.amount)}</td>
+          <td>${p.mode || "-"}</td>
+          <td>${p.note || "-"}</td>
+        </tr>
+      `;
+    }).join("");
   </script>
 </body>
 </html>
