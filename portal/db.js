@@ -166,3 +166,4 @@ export async function deletePayment(id) {
   const { error } = await supabase.from("payments").delete().eq("id", id);
   if (error) throw error;
 }
+
