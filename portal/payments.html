@@ -11,10 +11,7 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">Admin Portal</div>
-        </div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
       </div>
 
       <nav class="sbNav">
@@ -23,11 +20,11 @@
         <a class="sbLink" href="users.html">Users</a>
         <a class="sbLink active" href="payments.html">Payments</a>
         <a class="sbLink" href="payment-summary.html">Payment Summary</a>
-
-        <a class="sbLink" href="user-home.html">User Home</a>
-        <a class="sbLink" href="user.html">My Plots</a>
-        <a class="sbLink" href="my-payments.html">My Payments</a>
       </nav>
+
+      <div class="sbFoot">
+        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+      </div>
     </aside>
 
     <main class="main">
@@ -80,114 +77,128 @@
     </div>
   </div>
 
-  <script src="portal.js"></script>
-  <script>
+  <script type="module">
+    import { requireRole, wireLogout } from "./auth.js";
+    import { listProfiles, listPlots, listPayments, createPayment, deletePayment } from "./db.js";
+
+    await requireRole(["admin"]);
+    wireLogout();
+
     const tbody = document.querySelector("#paymentsTable tbody");
     const search = document.getElementById("paySearch");
 
-    function renderPayments() {
-      const q = (search.value || "").trim().toLowerCase();
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalBody = document.getElementById("modalBody");
+    const modalCancel = document.getElementById("modalCancel");
+    const modalOk = document.getElementById("modalOk");
 
-      const rows = payments
-        .map(p => {
-          const u = users.find(x => x.id === p.userId);
-          const pl = plots.find(x => x.id === p.plotId);
-          return { p, u, pl };
-        })
-        .filter(x => {
-          const name = (x.u?.name || "").toLowerCase();
-          const phone = (x.u?.phone || "").toLowerCase();
-          const plot = (x.pl?.plot || "").toLowerCase();
-          return (name + " " + phone + " " + plot).includes(q);
-        })
-        .sort((a,b) => new Date(b.p.date) - new Date(a.p.date));
+    function openModal(title, bodyHtml, onSave){
+      modalTitle.textContent = title;
+      modalBody.innerHTML = bodyHtml;
+      modal.classList.remove("hidden");
+      modalOk.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
+      modalCancel.onclick = () => modal.classList.add("hidden");
+    }
 
-      tbody.innerHTML = rows.map(x => `
+    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+
+    let profiles=[], plots=[], payments=[];
+    async function refresh(){
+      [profiles, plots, payments] = await Promise.all([listProfiles(), listPlots(), listPayments()]);
+      render();
+    }
+
+    function render(){
+      const q = (search.value||"").trim().toLowerCase();
+
+      const rows = payments.map(p => {
+        const u = profiles.find(x => x.id === p.user_id);
+        const pl = plots.find(x => x.id === p.plot_id);
+        const txt = `${u?.name||""} ${u?.phone||""} ${pl?.plot||""}`.toLowerCase();
+        return { p, u, pl, txt };
+      })
+      .filter(r => r.txt.includes(q))
+      .sort((a,b) => new Date(b.p.pay_date) - new Date(a.p.pay_date));
+
+      tbody.innerHTML = rows.map(r => `
         <tr>
-          <td>${escapeHtml(formatDate(x.p.date))}</td>
-          <td>${escapeHtml(x.u?.name || "-")}</td>
-          <td>${escapeHtml(x.u?.phone || "-")}</td>
-          <td><strong>${escapeHtml(x.pl?.plot || "-")}</strong></td>
-          <td class="right">₹${escapeHtml(String(x.p.amount))}</td>
-          <td>${escapeHtml(x.p.mode || "-")}</td>
-          <td>${escapeHtml(x.p.note || "-")}</td>
+          <td>${r.p.pay_date}</td>
+          <td>${r.u?.name || "-"}</td>
+          <td>${r.u?.phone || "-"}</td>
+          <td><strong>${r.pl?.plot || "-"}</strong></td>
+          <td class="right">${money(r.p.amount)}</td>
+          <td>${r.p.mode || "-"}</td>
+          <td>${r.p.note || "-"}</td>
           <td class="right">
-            <button class="btn small" data-act="deletePayment" data-id="${x.p.id}">Delete</button>
+            <button class="btn small" data-del="${r.p.id}">Delete</button>
           </td>
         </tr>
       `).join("");
     }
 
+    search.addEventListener("input", render);
+
     document.getElementById("btnAddPayment").addEventListener("click", () => {
-      const userOpts = users.filter(u => u.role !== "admin")
-        .map(u => `<option value="${u.id}">${escapeHtml(u.name)} • ${escapeHtml(u.phone)}</option>`).join("");
+      const userOpts = profiles.filter(u => u.role !== "admin")
+        .map(u => `<option value="${u.id}">${u.name||u.id} • ${u.phone||""}</option>`).join("");
 
       const plotOpts = plots
-        .map(pl => `<option value="${pl.id}">${escapeHtml(pl.plot)}</option>`).join("");
+        .map(pl => `<option value="${pl.id}">${pl.plot}</option>`).join("");
 
-      openModal({
-        title: "Add Payment",
-        bodyHtml: `
-          <div class="field"><label>User</label>
-            <select id="mPayUser">${userOpts}</select>
-          </div>
-          <div class="field"><label>Plot</label>
-            <select id="mPayPlot">${plotOpts}</select>
-          </div>
-          <div class="field"><label>Date</label>
-            <input id="mPayDate" type="date" />
-          </div>
-          <div class="field"><label>Amount (₹)</label>
-            <input id="mPayAmt" type="number" min="0" placeholder="10000" />
-          </div>
-          <div class="field"><label>Mode</label>
-            <select id="mPayMode">
-              <option>Cash</option>
-              <option>UPI</option>
-              <option>Bank Transfer</option>
-              <option>Cheque</option>
-            </select>
-          </div>
-          <div class="field"><label>Note</label>
-            <input id="mPayNote" placeholder="Advance payment" />
-          </div>
-        `,
-        onSave: () => {
-          const userId = document.getElementById("mPayUser").value;
-          const plotId = document.getElementById("mPayPlot").value;
-          const date = document.getElementById("mPayDate").value || new Date().toISOString().slice(0,10);
-          const amount = Number(document.getElementById("mPayAmt").value || 0);
-          const mode = document.getElementById("mPayMode").value;
-          const note = document.getElementById("mPayNote").value.trim();
-
-          if (!userId || !plotId) return alert("Select user and plot");
-          if (!(amount > 0)) return alert("Enter amount");
-
-          payments.unshift({ id: crypto.randomUUID(), userId, plotId, date, amount, mode, note });
-        }
+      openModal("Add Payment", `
+        <div class="field"><label>User</label><select id="mUser">${userOpts}</select></div>
+        <div class="field"><label>Plot</label><select id="mPlot">${plotOpts}</select></div>
+        <div class="field"><label>Date</label><input id="mDate" type="date" /></div>
+        <div class="field"><label>Amount (₹)</label><input id="mAmt" type="number" min="1" /></div>
+        <div class="field"><label>Mode</label>
+          <select id="mMode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select>
+        </div>
+        <div class="field"><label>Note</label><input id="mNote" placeholder="Advance payment" /></div>
+      `, async () => {
+        const user_id = document.getElementById("mUser").value;
+        const plot_id = document.getElementById("mPlot").value;
+        const pay_date = document.getElementById("mDate").value || new Date().toISOString().slice(0,10);
+        const amount = Number(document.getElementById("mAmt").value||0);
+        const mode = document.getElementById("mMode").value;
+        const note = document.getElementById("mNote").value.trim();
+        if (!user_id || !plot_id) return alert("Select user and plot");
+        if (!(amount > 0)) return alert("Enter amount");
+        await createPayment({ user_id, plot_id, pay_date, amount, mode, note });
       });
     });
 
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-act='deletePayment']");
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest("button[data-del]");
       if (!btn) return;
-      const id = btn.dataset.id;
-      payments = payments.filter(p => p.id !== id);
-      renderPayments();
+      const id = btn.getAttribute("data-del");
+      if (!confirm("Delete payment?")) return;
+      await deletePayment(id);
+      await refresh();
     });
 
     document.getElementById("btnExportPayments").addEventListener("click", () => {
       const rows = [["Date","User","Phone","Plot","Amount","Mode","Note"]];
       payments.forEach(p => {
-        const u = users.find(x => x.id === p.userId);
-        const pl = plots.find(x => x.id === p.plotId);
-        rows.push([formatDate(p.date), u?.name||"", u?.phone||"", pl?.plot||"", p.amount, p.mode||"", p.note||""]);
+        const u = profiles.find(x => x.id === p.user_id);
+        const pl = plots.find(x => x.id === p.plot_id);
+        rows.push([p.pay_date, u?.name||"", u?.phone||"", pl?.plot||"", p.amount, p.mode||"", p.note||""]);
       });
-      downloadCsv("golden-valley-payments.csv", rows);
+
+      const csv = rows.map(r => r.map(v => {
+        const s = String(v ?? "");
+        return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
+      }).join(",")).join("\n");
+
+      const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "golden-valley-payments.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
     });
 
-    search.addEventListener("input", renderPayments);
-    renderPayments();
+    await refresh();
   </script>
 </body>
 </html>
