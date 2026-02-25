@@ -32,10 +32,10 @@ export async function getMyProfile() {
     .from("profiles")
     .select("id,name,phone,role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle(); // ✅ avoids 406 when not found
 
   if (error) throw error;
-  return data;
+  return data; // can be null if missing
 }
 
 export async function signInWithEmail(email, password) {
@@ -166,4 +166,5 @@ export async function deletePayment(id) {
   const { error } = await supabase.from("payments").delete().eq("id", id);
   if (error) throw error;
 }
+
 
