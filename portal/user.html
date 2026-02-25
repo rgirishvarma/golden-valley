@@ -1,9 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • My Plots</title>
+  <title>My Plots</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
@@ -18,6 +17,7 @@
         <a class="sbLink" href="user-home.html">User Home</a>
         <a class="sbLink active" href="user.html">My Plots</a>
         <a class="sbLink" href="my-payments.html">My Payments</a>
+        <a class="sbLink" href="profile.html">Profile</a>
       </nav>
 
       <div class="sbFoot">
@@ -27,16 +27,21 @@
 
     <main class="main">
       <header class="pageTop">
-        <h1>My Assigned Plots</h1>
-        <div class="actions" id="who"></div>
+        <h1>My Plots</h1>
       </header>
 
       <section class="card">
-        <div class="cardHeader"><h2>Plot details</h2></div>
         <div class="tableWrap">
-          <table class="table" id="tbl">
-            <thead><tr><th>Plot</th><th>Status</th><th>Location</th><th>Notes</th></tr></thead>
-            <tbody></tbody>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Plot</th>
+                <th>Status</th>
+                <th>Location</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
           </table>
         </div>
       </section>
@@ -49,10 +54,13 @@
 
     const { profile } = await requireRole(["user","admin"]);
     wireLogout();
-    document.getElementById("who").textContent = `${profile.name || "User"} (${profile.phone || ""})`;
 
-    const plots = await listPlots(); // RLS returns only assigned plots
-    const tbody = document.querySelector("#tbl tbody");
+    if (profile.role === "admin") {
+      window.location.href = "./index.html";
+    }
+
+    const plots = await listPlots();
+    const tbody = document.getElementById("tbody");
 
     tbody.innerHTML = plots.map(p => `
       <tr>
