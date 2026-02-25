@@ -11,10 +11,7 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">Admin Portal</div>
-        </div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
       </div>
 
       <nav class="sbNav">
@@ -23,50 +20,36 @@
         <a class="sbLink" href="users.html">Users</a>
         <a class="sbLink" href="payments.html">Payments</a>
         <a class="sbLink active" href="payment-summary.html">Payment Summary</a>
-        <a class="sbLink" href="user-home.html">User Home</a>
       </nav>
+
+      <div class="sbFoot">
+        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+      </div>
     </aside>
 
     <main class="main">
       <header class="pageTop">
         <h1>Payment Summary (Per Plot)</h1>
         <div class="actions">
-          <input id="sumSearch" class="input" placeholder="Search plot / owner / phone" />
-          <button class="btn ghost" id="btnExportSummary">Export CSV</button>
+          <input id="q" class="input" placeholder="Search plot / owner / phone" />
+          <button class="btn ghost" id="btnExport">Export CSV</button>
         </div>
       </header>
 
       <section class="grid2" style="grid-template-columns: repeat(3, 1fr);">
-        <div class="stat">
-          <div class="statLabel">Total Price</div>
-          <div class="statValue" id="stTotalPrice">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Total Paid</div>
-          <div class="statValue" id="stPaid">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Total Balance</div>
-          <div class="statValue" id="stBal">₹0</div>
-        </div>
+        <div class="stat"><div class="statLabel">Total Price</div><div class="statValue" id="stTotal">₹0</div></div>
+        <div class="stat"><div class="statLabel">Total Paid</div><div class="statValue" id="stPaid">₹0</div></div>
+        <div class="stat"><div class="statLabel">Total Balance</div><div class="statValue" id="stBal">₹0</div></div>
       </section>
 
       <section class="card">
-        <div class="cardHeader">
-          <h2>All plots summary</h2>
-        </div>
-
+        <div class="cardHeader"><h2>All plots summary</h2></div>
         <div class="tableWrap">
-          <table class="table" id="sumTable">
+          <table class="table" id="tbl">
             <thead>
               <tr>
-                <th>Plot</th>
-                <th>Status</th>
-                <th>Owner</th>
-                <th>Phone</th>
-                <th class="right">Total Price</th>
-                <th class="right">Paid</th>
-                <th class="right">Balance</th>
+                <th>Plot</th><th>Status</th><th>Owner</th><th>Phone</th>
+                <th class="right">Total Price</th><th class="right">Paid</th><th class="right">Balance</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -76,83 +59,103 @@
     </main>
   </div>
 
-  <script src="portal.js"></script>
-  <script>
-    const tbody = document.querySelector("#sumTable tbody");
-    const search = document.getElementById("sumSearch");
+  <script type="module">
+    import { requireRole, wireLogout } from "./auth.js";
+    import { listPlots, listProfiles, listAssignments, listPayments } from "./db.js";
 
-    const stTotalPrice = document.getElementById("stTotalPrice");
+    await requireRole(["admin"]);
+    wireLogout();
+
+    const q = document.getElementById("q");
+    const tbody = document.querySelector("#tbl tbody");
+
+    const stTotal = document.getElementById("stTotal");
     const stPaid = document.getElementById("stPaid");
     const stBal = document.getElementById("stBal");
 
-    function money(n){
-      const x = Number(n || 0);
-      return "₹" + x.toLocaleString("en-IN");
+    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+
+    let plots=[], profiles=[], assigns=[], pays=[];
+    async function refresh(){
+      [plots, profiles, assigns, pays] = await Promise.all([
+        listPlots(), listProfiles(), listAssignments(), listPayments()
+      ]);
+      render();
+    }
+
+    function ownerForPlot(plotId){
+      const a = assigns.find(x => x.plot_id === plotId);
+      if (!a) return null;
+      return profiles.find(p => p.id === a.user_id) || null;
     }
 
     function paidForPlot(plotId){
-      return payments
-        .filter(p => p.plotId === plotId)
-        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+      return pays.filter(p => p.plot_id === plotId).reduce((s,p)=> s + Number(p.amount||0), 0);
     }
 
     function render(){
-      const q = (search.value || "").trim().toLowerCase();
+      const s = (q.value||"").trim().toLowerCase();
 
       let totalPrice = 0;
       let totalPaid = 0;
 
       const rows = plots.map(pl => {
-        const owner = users.find(u => u.id === pl.ownerUserId);
-        const price = Number(pl.totalPrice || 0);
+        const owner = ownerForPlot(pl.id);
+        const price = Number(pl.total_price||0);
         const paid = paidForPlot(pl.id);
         const bal = Math.max(price - paid, 0);
 
         totalPrice += price;
         totalPaid += paid;
 
-        const ownerName = owner?.name || "-";
-        const ownerPhone = owner?.phone || "-";
-
-        return {
-          pl, ownerName, ownerPhone, price, paid, bal,
-          searchText: (pl.plot + " " + ownerName + " " + ownerPhone).toLowerCase()
-        };
-      })
-      .filter(r => r.searchText.includes(q))
-      .sort((a,b) => a.pl.plot.localeCompare(b.pl.plot));
+        const txt = `${pl.plot} ${owner?.name||""} ${owner?.phone||""}`.toLowerCase();
+        return { pl, owner, price, paid, bal, txt };
+      }).filter(r => r.txt.includes(s))
+        .sort((a,b) => (a.pl.plot||"").localeCompare(b.pl.plot||""));
 
       tbody.innerHTML = rows.map(r => `
         <tr>
-          <td><strong>${escapeHtml(r.pl.plot)}</strong></td>
-          <td>${badgeForStatus(r.pl.status)}</td>
-          <td>${escapeHtml(r.ownerName)}</td>
-          <td>${escapeHtml(r.ownerPhone)}</td>
+          <td><strong>${r.pl.plot}</strong></td>
+          <td>${r.pl.status}</td>
+          <td>${r.owner?.name || "-"}</td>
+          <td>${r.owner?.phone || "-"}</td>
           <td class="right">${money(r.price)}</td>
           <td class="right">${money(r.paid)}</td>
           <td class="right">${money(r.bal)}</td>
         </tr>
       `).join("");
 
-      stTotalPrice.textContent = money(totalPrice);
+      stTotal.textContent = money(totalPrice);
       stPaid.textContent = money(totalPaid);
       stBal.textContent = money(Math.max(totalPrice - totalPaid, 0));
     }
 
-    document.getElementById("btnExportSummary").addEventListener("click", () => {
+    q.addEventListener("input", render);
+
+    document.getElementById("btnExport").addEventListener("click", () => {
       const rows = [["Plot","Status","Owner","Phone","TotalPrice","Paid","Balance"]];
       plots.forEach(pl => {
-        const owner = users.find(u => u.id === pl.ownerUserId);
-        const price = Number(pl.totalPrice || 0);
-        const paid = payments.filter(p => p.plotId === pl.id).reduce((s,p) => s + Number(p.amount||0), 0);
+        const owner = ownerForPlot(pl.id);
+        const price = Number(pl.total_price||0);
+        const paid = paidForPlot(pl.id);
         const bal = Math.max(price - paid, 0);
         rows.push([pl.plot, pl.status, owner?.name||"", owner?.phone||"", price, paid, bal]);
       });
-      downloadCsv("golden-valley-payment-summary.csv", rows);
+
+      const csv = rows.map(r => r.map(v => {
+        const s = String(v ?? "");
+        return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
+      }).join(",")).join("\n");
+
+      const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "golden-valley-payment-summary.csv";
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
     });
 
-    search.addEventListener("input", render);
-    render();
+    await refresh();
   </script>
 </body>
 </html>
