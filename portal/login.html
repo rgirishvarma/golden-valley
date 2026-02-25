@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Golden Valley Login</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
@@ -14,7 +15,7 @@
 
       <div style="padding:14px;display:grid;gap:10px;">
 
-        <!-- Login Type Toggle -->
+        <!-- Toggle Buttons -->
         <div style="display:flex;gap:10px;">
           <button class="btn ghost" id="btnEmailMode">Email Login</button>
           <button class="btn ghost" id="btnPhoneMode">Mobile OTP</button>
@@ -26,11 +27,15 @@
             <label>Email</label>
             <input id="email" class="input" placeholder="admin@email.com" />
           </div>
+
           <div class="field">
             <label>Password</label>
             <input id="password" type="password" class="input" />
           </div>
-          <button class="btn" id="btnEmailLogin" style="width:100%;">Login</button>
+
+          <button class="btn" id="btnEmailLogin" style="width:100%;">
+            Login with Email
+          </button>
         </div>
 
         <!-- PHONE OTP LOGIN -->
@@ -40,18 +45,29 @@
             <input id="phone" class="input" placeholder="+91XXXXXXXXXX" />
           </div>
 
-          <button class="btn" id="btnSendOtp" style="width:100%;">Send OTP</button>
+          <button class="btn" id="btnSendOtp" style="width:100%;">
+            Send OTP
+          </button>
 
           <div id="otpArea" style="display:none;">
             <div class="field">
               <label>Enter OTP</label>
               <input id="otp" class="input" />
             </div>
-            <button class="btn" id="btnVerifyOtp" style="width:100%;">Verify OTP</button>
+
+            <button class="btn" id="btnVerifyOtp" style="width:100%;">
+              Verify OTP
+            </button>
+          </div>
+
+          <div class="help" style="font-size:13px;color:#666;">
+            ⚠ If OTP says <b>“Signups not allowed for otp”</b>,  
+            please login once with Email and link your phone.
           </div>
         </div>
 
-        <div class="help" id="msg"></div>
+        <div class="help" id="msg" style="color:#c0392b;"></div>
+
       </div>
     </section>
   </main>
@@ -61,26 +77,30 @@
     import { getMyProfile } from "./db.js";
 
     const msg = document.getElementById("msg");
-
     const emailBox = document.getElementById("emailBox");
     const phoneBox = document.getElementById("phoneBox");
     const otpArea = document.getElementById("otpArea");
 
+    function setMsg(t){ msg.textContent = t || ""; }
+
+    // Toggle Modes
     document.getElementById("btnEmailMode").onclick = () => {
       emailBox.style.display = "block";
       phoneBox.style.display = "none";
-      msg.textContent = "";
+      otpArea.style.display = "none";
+      setMsg("");
     };
 
     document.getElementById("btnPhoneMode").onclick = () => {
       emailBox.style.display = "none";
       phoneBox.style.display = "block";
-      msg.textContent = "";
+      setMsg("");
     };
 
     // EMAIL LOGIN
     document.getElementById("btnEmailLogin").onclick = async () => {
-      msg.textContent = "";
+      setMsg("");
+
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
 
@@ -90,7 +110,7 @@
       });
 
       if (error) {
-        msg.textContent = error.message;
+        setMsg(error.message);
         return;
       }
 
@@ -99,26 +119,35 @@
 
     // SEND OTP
     document.getElementById("btnSendOtp").onclick = async () => {
-      msg.textContent = "";
+      setMsg("");
       const phone = document.getElementById("phone").value.trim();
+
+      if (!phone.startsWith("+")) {
+        setMsg("Use format +91XXXXXXXXXX");
+        return;
+      }
 
       const { error } = await supabase.auth.signInWithOtp({
         phone,
-        options: { shouldCreateUser: false }
+        options: { shouldCreateUser: false } // important
       });
 
       if (error) {
-        msg.textContent = error.message;
+        if (error.message.includes("Signups not allowed")) {
+          setMsg("Phone not linked to any account. Please login with Email once and link your phone.");
+        } else {
+          setMsg(error.message);
+        }
         return;
       }
 
       otpArea.style.display = "block";
-      msg.textContent = "OTP sent ✅";
+      setMsg("OTP sent ✅");
     };
 
     // VERIFY OTP
     document.getElementById("btnVerifyOtp").onclick = async () => {
-      msg.textContent = "";
+      setMsg("");
       const phone = document.getElementById("phone").value.trim();
       const token = document.getElementById("otp").value.trim();
 
@@ -129,7 +158,7 @@
       });
 
       if (error) {
-        msg.textContent = error.message;
+        setMsg(error.message);
         return;
       }
 
@@ -140,7 +169,7 @@
       const profile = await getMyProfile();
 
       if (!profile) {
-        msg.textContent = "Profile not found. Contact admin.";
+        setMsg("Profile not found. Contact admin.");
         return;
       }
 
@@ -159,4 +188,3 @@
   </script>
 </body>
 </html>
-
