@@ -1,9 +1,8 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • Admin Dashboard</title>
+  <title>Admin Dashboard</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
@@ -11,85 +10,141 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">Admin Portal</div>
-        </div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
       </div>
-
       <nav class="sbNav">
         <a class="sbLink active" href="index.html">Dashboard</a>
         <a class="sbLink" href="plots.html">Plots</a>
         <a class="sbLink" href="users.html">Users</a>
         <a class="sbLink" href="payments.html">Payments</a>
         <a class="sbLink" href="payment-summary.html">Payment Summary</a>
-        <a class="sbLink" href="user-home.html">User Home</a>
         <a class="sbLink" href="installment-plans.html">Installment Plans</a>
       </nav>
-
       <div class="sbFoot">
-        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+        <button class="btn ghost" id="btnLogout">Logout</button>
       </div>
     </aside>
 
     <main class="main">
       <header class="pageTop">
-        <h1>Dashboard</h1>
-        <div class="actions"></div>
+        <h1>Admin Financial Dashboard</h1>
       </header>
 
-      <section class="grid2">
-        <div class="stat"><div class="statLabel">Total plots</div><div class="statValue" id="stTotalPlots">0</div></div>
-        <div class="stat"><div class="statLabel">Assigned plots</div><div class="statValue" id="stAssignedPlots">0</div></div>
-        <div class="stat"><div class="statLabel">Available plots</div><div class="statValue" id="stAvailablePlots">0</div></div>
-        <div class="stat"><div class="statLabel">Users</div><div class="statValue" id="stUsers">0</div></div>
+      <section class="grid2" style="grid-template-columns: repeat(5,1fr);">
+        <div class="stat">
+          <div class="statLabel">Total Revenue</div>
+          <div class="statValue" id="stRevenue">₹0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Total Collected</div>
+          <div class="statValue" id="stCollected">₹0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Total Outstanding</div>
+          <div class="statValue" id="stOutstanding">₹0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Overdue Amount</div>
+          <div class="statValue" id="stOverdue">₹0</div>
+        </div>
+        <div class="stat">
+          <div class="statLabel">Overdue Customers</div>
+          <div class="statValue" id="stOverdueCount">0</div>
+        </div>
       </section>
 
-      <section class="card">
-        <div class="cardHeader"><h2>Recent plots</h2></div>
+      <section class="card" style="margin-top:14px;">
+        <div class="cardHeader"><h2>Overdue List</h2></div>
         <div class="tableWrap">
-          <table class="table" id="plotsTable">
+          <table class="table">
             <thead>
-              <tr><th>Plot</th><th>Status</th><th>Location</th><th class="right">Total Price</th></tr>
+              <tr>
+                <th>Plot</th>
+                <th>User</th>
+                <th class="right">Balance</th>
+              </tr>
             </thead>
-            <tbody></tbody>
+            <tbody id="overdueBody"></tbody>
           </table>
         </div>
       </section>
     </main>
   </div>
 
-  <script type="module">
-    import { requireRole, wireLogout } from "./auth.js";
-    import { listPlots, listProfiles } from "./db.js";
+<script type="module">
+import { requireRole, wireLogout } from "./auth.js";
+import { supabase } from "./db.js";
 
-    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+await requireRole(["admin"]);
+wireLogout();
 
-    await requireRole(["admin"]);
-    wireLogout();
+function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-    const plots = await listPlots();
-    const profiles = await listProfiles();
+// Fetch summary view
+const { data: summary } = await supabase
+  .from("admin_financial_summary")
+  .select("*");
 
-    const total = plots.length;
-    const assigned = plots.filter(p => String(p.status).toLowerCase() === "assigned").length;
-    const available = plots.filter(p => String(p.status).toLowerCase() === "available").length;
+let totalRevenue = 0;
+let totalCollected = 0;
+let totalOutstanding = 0;
 
-    document.getElementById("stTotalPlots").textContent = total;
-    document.getElementById("stAssignedPlots").textContent = assigned;
-    document.getElementById("stAvailablePlots").textContent = available;
-    document.getElementById("stUsers").textContent = profiles.length;
+summary.forEach(r=>{
+  totalRevenue += Number(r.total_price||0);
+  totalCollected += Number(r.total_paid||0);
+  totalOutstanding += Number(r.balance||0);
+});
 
-    const tbody = document.querySelector("#plotsTable tbody");
-    tbody.innerHTML = plots.slice(0, 10).map(p => `
-      <tr>
-        <td><strong>${p.plot}</strong></td>
-        <td>${p.status}</td>
-        <td>${p.location || "-"}</td>
-        <td class="right">${money(p.total_price)}</td>
-      </tr>
-    `).join("");
-  </script>
+document.getElementById("stRevenue").textContent = money(totalRevenue);
+document.getElementById("stCollected").textContent = money(totalCollected);
+document.getElementById("stOutstanding").textContent = money(totalOutstanding);
+
+// -------- Overdue Logic --------
+// Basic rule: balance > 0 AND at least 1 installment past start_date
+
+const { data: plans } = await supabase.from("installment_plans").select("*");
+const { data: users } = await supabase.from("profiles").select("*");
+
+const today = new Date();
+let overdueAmount = 0;
+let overdueCustomers = new Set();
+
+const overdueRows = [];
+
+for (const plan of plans) {
+  const plot = summary.find(s=>s.plot_id === plan.plot_id);
+  if (!plot) continue;
+
+  const start = new Date(plan.start_date);
+  const monthsPassed = (today.getFullYear()-start.getFullYear())*12 + (today.getMonth()-start.getMonth());
+
+  const dueMonths = Math.min(monthsPassed+1, plan.installments_count);
+  const cumulativeDue = dueMonths * Number(plan.installment_amount||0);
+
+  if (plot.total_paid < cumulativeDue && plot.balance > 0) {
+    overdueAmount += Number(plot.balance);
+    overdueCustomers.add(plan.user_id);
+
+    const user = users.find(u=>u.id===plan.user_id);
+    overdueRows.push({
+      plot: plot.plot,
+      user: user?.name || "",
+      balance: plot.balance
+    });
+  }
+}
+
+document.getElementById("stOverdue").textContent = money(overdueAmount);
+document.getElementById("stOverdueCount").textContent = overdueCustomers.size;
+
+const tbody = document.getElementById("overdueBody");
+tbody.innerHTML = overdueRows.map(r=>`
+  <tr style="background:#ffe6e6;">
+    <td><strong>${r.plot}</strong></td>
+    <td>${r.user}</td>
+    <td class="right">${money(r.balance)}</td>
+  </tr>
+`).join("") || `<tr><td colspan="3">No overdue accounts 🎉</td></tr>`;
+</script>
 </body>
 </html>
-
