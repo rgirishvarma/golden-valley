@@ -6,70 +6,71 @@
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sbBrand">
-        <div class="sbLogo">GV</div>
-        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sbBrand">
+      <div class="sbLogo">GV</div>
+      <div>
+        <div class="sbTitle">Golden Valley</div>
+        <div class="sbSub">Admin Portal</div>
       </div>
-      <nav class="sbNav">
-        <a class="sbLink active" href="index.html">Dashboard</a>
-        <a class="sbLink" href="plots.html">Plots</a>
-        <a class="sbLink" href="users.html">Users</a>
-        <a class="sbLink" href="payments.html">Payments</a>
-        <a class="sbLink" href="payment-summary.html">Payment Summary</a>
-        <a class="sbLink" href="installment-plans.html">Installment Plans</a>
-      </nav>
-      <div class="sbFoot">
-        <button class="btn ghost" id="btnLogout">Logout</button>
+    </div>
+
+    <nav class="sbNav">
+      <a class="sbLink active" href="index.html">Dashboard</a>
+      <a class="sbLink" href="plots.html">Plots</a>
+      <a class="sbLink" href="users.html">Users</a>
+      <a class="sbLink" href="payments.html">Payments</a>
+      <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+      <a class="sbLink" href="installment-plans.html">Installment Plans</a>
+    </nav>
+
+    <div class="sbFoot">
+      <button class="btn ghost" id="btnLogout">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="pageTop">
+      <h1>Admin Financial Dashboard</h1>
+    </header>
+
+    <section class="grid2" style="grid-template-columns: repeat(4,1fr);">
+      <div class="stat">
+        <div class="statLabel">Total Revenue</div>
+        <div class="statValue" id="stRevenue">₹0</div>
       </div>
-    </aside>
+      <div class="stat">
+        <div class="statLabel">Total Collected</div>
+        <div class="statValue" id="stCollected">₹0</div>
+      </div>
+      <div class="stat">
+        <div class="statLabel">Total Outstanding</div>
+        <div class="statValue" id="stOutstanding">₹0</div>
+      </div>
+      <div class="stat">
+        <div class="statLabel">Overdue / Delayed</div>
+        <div class="statValue" id="stOverdueCount">0</div>
+      </div>
+    </section>
 
-    <main class="main">
-      <header class="pageTop">
-        <h1>Admin Financial Dashboard</h1>
-      </header>
-
-      <section class="grid2" style="grid-template-columns: repeat(5,1fr);">
-        <div class="stat">
-          <div class="statLabel">Total Revenue</div>
-          <div class="statValue" id="stRevenue">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Total Collected</div>
-          <div class="statValue" id="stCollected">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Total Outstanding</div>
-          <div class="statValue" id="stOutstanding">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Overdue Amount</div>
-          <div class="statValue" id="stOverdue">₹0</div>
-        </div>
-        <div class="stat">
-          <div class="statLabel">Overdue Customers</div>
-          <div class="statValue" id="stOverdueCount">0</div>
-        </div>
-      </section>
-
-      <section class="card" style="margin-top:14px;">
-        <div class="cardHeader"><h2>Overdue List</h2></div>
-        <div class="tableWrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Plot</th>
-                <th>User</th>
-                <th class="right">Balance</th>
-              </tr>
-            </thead>
-            <tbody id="overdueBody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
+    <section class="card" style="margin-top:20px;">
+      <div class="cardHeader"><h2>Delayed / Overdue Plots</h2></div>
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Plot</th>
+              <th>Status</th>
+              <th class="right">Balance</th>
+            </tr>
+          </thead>
+          <tbody id="overdueBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
 
 <script type="module">
 import { requireRole, wireLogout } from "./auth.js";
@@ -80,7 +81,10 @@ wireLogout();
 
 function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-// Fetch summary view
+// 🔥 Auto update status every time dashboard loads
+await supabase.rpc("update_plot_payment_status");
+
+// Fetch summary
 const { data: summary } = await supabase
   .from("admin_financial_summary")
   .select("*");
@@ -88,6 +92,7 @@ const { data: summary } = await supabase
 let totalRevenue = 0;
 let totalCollected = 0;
 let totalOutstanding = 0;
+let overdueCount = 0;
 
 summary.forEach(r=>{
   totalRevenue += Number(r.total_price||0);
@@ -99,50 +104,33 @@ document.getElementById("stRevenue").textContent = money(totalRevenue);
 document.getElementById("stCollected").textContent = money(totalCollected);
 document.getElementById("stOutstanding").textContent = money(totalOutstanding);
 
-// -------- Overdue Logic --------
-// Basic rule: balance > 0 AND at least 1 installment past start_date
+// Fetch plots for status
+const { data: plots } = await supabase
+  .from("plots")
+  .select("id,plot,payment_status,total_price");
 
-const { data: plans } = await supabase.from("installment_plans").select("*");
-const { data: users } = await supabase.from("profiles").select("*");
+const overduePlots = [];
 
-const today = new Date();
-let overdueAmount = 0;
-let overdueCustomers = new Set();
-
-const overdueRows = [];
-
-for (const plan of plans) {
-  const plot = summary.find(s=>s.plot_id === plan.plot_id);
-  if (!plot) continue;
-
-  const start = new Date(plan.start_date);
-  const monthsPassed = (today.getFullYear()-start.getFullYear())*12 + (today.getMonth()-start.getMonth());
-
-  const dueMonths = Math.min(monthsPassed+1, plan.installments_count);
-  const cumulativeDue = dueMonths * Number(plan.installment_amount||0);
-
-  if (plot.total_paid < cumulativeDue && plot.balance > 0) {
-    overdueAmount += Number(plot.balance);
-    overdueCustomers.add(plan.user_id);
-
-    const user = users.find(u=>u.id===plan.user_id);
-    overdueRows.push({
-      plot: plot.plot,
-      user: user?.name || "",
-      balance: plot.balance
+for (const p of plots) {
+  if (p.payment_status === "overdue" || p.payment_status === "delayed") {
+    overdueCount++;
+    const summaryRow = summary.find(s=>s.plot_id === p.id);
+    overduePlots.push({
+      plot: p.plot,
+      status: p.payment_status,
+      balance: summaryRow?.balance || 0
     });
   }
 }
 
-document.getElementById("stOverdue").textContent = money(overdueAmount);
-document.getElementById("stOverdueCount").textContent = overdueCustomers.size;
+document.getElementById("stOverdueCount").textContent = overdueCount;
 
 const tbody = document.getElementById("overdueBody");
-tbody.innerHTML = overdueRows.map(r=>`
-  <tr style="background:#ffe6e6;">
-    <td><strong>${r.plot}</strong></td>
-    <td>${r.user}</td>
-    <td class="right">${money(r.balance)}</td>
+tbody.innerHTML = overduePlots.map(p=>`
+  <tr class="${p.status}">
+    <td><strong>${p.plot}</strong></td>
+    <td><span class="badge ${p.status}">${p.status}</span></td>
+    <td class="right">${money(p.balance)}</td>
   </tr>
 `).join("") || `<tr><td colspan="3">No overdue accounts 🎉</td></tr>`;
 </script>
