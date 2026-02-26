@@ -77,10 +77,11 @@ export async function deleteProfile(id) {
 export async function listPlots() {
   const { data, error } = await supabase
     .from("plots")
-    .select("id,plot,status,location,notes,total_price,created_at")
-    .order("created_at", { ascending: false });
+    .select("id,plot,status,location,total_price,notes,payment_status")
+    .order("plot", { ascending: true });
+
   if (error) throw error;
-  return data;
+  return data || [];
 }
 
 export async function createPlot(plotRow) {
@@ -192,5 +193,6 @@ export async function deleteInstallmentPlan(id) {
   const { error } = await supabase.from("installment_plans").delete().eq("id", id);
   if (error) throw error;
 }
+
 
 
