@@ -81,4 +81,12 @@ tr.delayed { background:#ffe6e6; }
 tr.overdue{background:#fffaf0;}
 tr.delayed{background:#ffe6e6;}
 
+.badge{padding:4px 8px;border-radius:6px;font-size:12px;text-transform:uppercase;font-weight:600;}
+.badge.active{background:#e0f7ea;color:#0a7d3b;}
+.badge.overdue{background:#fff3cd;color:#856404;}
+.badge.delayed{background:#f8d7da;color:#721c24;}
+.badge.completed{background:#d1ecf1;color:#0c5460;}
+tr.overdue{background:#fffaf0;}
+tr.delayed{background:#ffe6e6;}
+
 
