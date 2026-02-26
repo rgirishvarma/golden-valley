@@ -41,8 +41,9 @@
                 <th>Plot</th>
                 <th>Start</th>
                 <th>Frequency</th>
-                <th class="right">Installments</th>
-                <th class="right">Each Amount</th>
+                <th class="right">Months</th>
+                <th class="right">Monthly Amount</th>
+                <th class="right">Final Month</th>
               </tr>
             </thead>
             <tbody id="planBody"></tbody>
@@ -51,7 +52,7 @@
       </section>
 
       <section class="card" style="margin-top:14px;">
-        <div class="cardHeader"><h2>Schedule</h2></div>
+        <div class="cardHeader"><h2>Schedule (40 months + Final Remaining)</h2></div>
         <div class="tableWrap">
           <table class="table">
             <thead>
@@ -67,7 +68,7 @@
           </table>
         </div>
         <div class="help" style="padding:10px;color:#666;">
-          Status is calculated using your payments (Paid till date vs total due).
+          Status is calculated using your payments (Paid vs cumulative due).
         </div>
       </section>
     </main>
@@ -84,76 +85,95 @@
     document.getElementById("who").textContent = profile.name || "User";
 
     const [plots, payments, plans] = await Promise.all([
-      listPlots(),       // RLS: only assigned
-      listPayments(),    // RLS: only own
+      listPlots(),           // RLS: only assigned
+      listPayments(),        // RLS: only own
       listInstallmentPlans() // RLS: only own
     ]);
 
     function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
-
-    const planBody = document.getElementById("planBody");
-    planBody.innerHTML = plans.map(pl => {
-      const plot = plots.find(p => p.id === pl.plot_id);
-      return `
-        <tr>
-          <td><strong>${plot?.plot || "-"}</strong></td>
-          <td>${pl.start_date}</td>
-          <td>${pl.frequency}</td>
-          <td class="right">${pl.installments_count}</td>
-          <td class="right">${money(pl.installment_amount)}</td>
-        </tr>
-      `;
-    }).join("") || `<tr><td colspan="5">No installment plan set. Ask admin to set your plan.</td></tr>`;
-
     function addMonths(dt, m){
       const d = new Date(dt);
       d.setMonth(d.getMonth() + m);
       return d;
     }
-    function addDays(dt, days){
-      const d = new Date(dt);
-      d.setDate(d.getDate() + days);
-      return d;
-    }
-    function fmtDate(d){
-      return d.toISOString().slice(0,10);
-    }
+    function fmtDate(d){ return d.toISOString().slice(0,10); }
 
-    // Build schedule lines for all plans
-    const sched = [];
-    for (const plan of plans) {
-      for (let i = 1; i <= plan.installments_count; i++) {
-        const base = new Date(plan.start_date);
-        const due = plan.frequency === "weekly" ? addDays(base, 7*(i-1)) : addMonths(base, (i-1));
-        sched.push({
-          plot_id: plan.plot_id,
-          n: i,
-          due_date: fmtDate(due),
-          due_amount: Number(plan.installment_amount),
-        });
-      }
-    }
-
-    // Determine "Paid/Pending" by comparing cumulative due vs paid
+    // Paid per plot
     const paidByPlot = {};
     for (const p of payments) {
       paidByPlot[p.plot_id] = (paidByPlot[p.plot_id] || 0) + Number(p.amount||0);
     }
 
-    // Render schedule sorted by due date
+    // Render plan table (show final remainder too)
+    const planBody = document.getElementById("planBody");
+    planBody.innerHTML = plans.map(plan => {
+      const plot = plots.find(p => p.id === plan.plot_id);
+      const total = Number(plot?.total_price || 0);
+
+      const n = Number(plan.installments_count || 0);      // should be 40
+      const amt = Number(plan.installment_amount || 0);    // monthly amount
+      const remainder = Math.max(total - (amt * n), 0);
+
+      return `
+        <tr>
+          <td><strong>${plot?.plot || "-"}</strong></td>
+          <td>${plan.start_date}</td>
+          <td>${plan.frequency}</td>
+          <td class="right">${n}</td>
+          <td class="right">${money(amt)}</td>
+          <td class="right">${remainder > 0 ? money(remainder) : "-"}</td>
+        </tr>
+      `;
+    }).join("") || `<tr><td colspan="6">No installment plan set. Ask admin to set your plan.</td></tr>`;
+
+    // Build schedule: months 1..N + month N+1 remainder
+    const sched = [];
+    for (const plan of plans) {
+      const plot = plots.find(p => p.id === plan.plot_id);
+      if (!plot) continue;
+
+      const total = Number(plot.total_price || 0);
+      const n = Number(plan.installments_count || 0);     // set as 40
+      const amt = Number(plan.installment_amount || 0);
+      const remainder = Math.max(total - (amt * n), 0);
+
+      // Normal installments 1..N
+      for (let i = 1; i <= n; i++) {
+        const due = addMonths(new Date(plan.start_date), i - 1);
+        sched.push({
+          plot_id: plan.plot_id,
+          label: `${i}`,
+          due_date: fmtDate(due),
+          due_amount: amt,
+        });
+      }
+
+      // Final remaining installment on month N+1 (here 41)
+      if (remainder > 0) {
+        const dueFinal = addMonths(new Date(plan.start_date), n); // +40 months => 41st due
+        sched.push({
+          plot_id: plan.plot_id,
+          label: `${n + 1} (Final)`,
+          due_date: fmtDate(dueFinal),
+          due_amount: remainder,
+        });
+      }
+    }
+
+    // Determine status using cumulative due vs paid
     sched.sort((a,b)=> a.due_date.localeCompare(b.due_date));
+    const cumulativeDue = {};
     const schedBody = document.getElementById("schedBody");
 
-    // Track cumulative due per plot for status
-    const cumulativeDue = {};
     schedBody.innerHTML = sched.map(s => {
-      cumulativeDue[s.plot_id] = (cumulativeDue[s.plot_id] || 0) + s.due_amount;
+      cumulativeDue[s.plot_id] = (cumulativeDue[s.plot_id] || 0) + Number(s.due_amount||0);
       const paid = paidByPlot[s.plot_id] || 0;
       const status = paid >= cumulativeDue[s.plot_id] ? "Paid" : "Pending";
       const plot = plots.find(p => p.id === s.plot_id);
+
       return `
         <tr>
-          <td>${s.n}</td>
+          <td>${s.label}</td>
           <td><strong>${plot?.plot || "-"}</strong></td>
           <td>${s.due_date}</td>
           <td class="right">${money(s.due_amount)}</td>
