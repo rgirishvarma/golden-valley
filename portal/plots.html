@@ -1,216 +1,82 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • Plots</title>
+  <title>Plots</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sbBrand">
-        <div class="sbLogo">GV</div>
-        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
-      </div>
-
-      <nav class="sbNav">
-        <a class="sbLink" href="index.html">Dashboard</a>
-        <a class="sbLink active" href="plots.html">Plots</a>
-        <a class="sbLink" href="users.html">Users</a>
-        <a class="sbLink" href="payments.html">Payments</a>
-        <a class="sbLink" href="payment-summary.html">Payment Summary</a>
-      </nav>
-
-      <div class="sbFoot">
-        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="pageTop">
-        <h1>Plots</h1>
-        <div class="actions">
-          <input id="q" class="input" placeholder="Search plot..." />
-          <button class="btn" id="btnAdd">+ Add Plot</button>
-        </div>
-      </header>
-
-      <section class="card">
-        <div class="tableWrap">
-          <table class="table" id="tbl">
-            <thead>
-              <tr>
-                <th>Plot</th><th>Status</th><th>Owner</th><th>Phone</th>
-                <th class="right">Total Price</th>
-                <th class="right">Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- modal -->
-  <div class="modal hidden" id="modal">
-    <div class="modalBox">
-      <div class="modalTitle" id="modalTitle">Modal</div>
-      <div id="modalBody"></div>
-      <div class="modalActions">
-        <button class="btn ghost" id="modalCancel">Cancel</button>
-        <button class="btn" id="modalOk">Save</button>
-      </div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sbBrand">
+      <div class="sbLogo">GV</div>
+      <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
     </div>
-  </div>
 
-  <script type="module">
-    import { requireRole, wireLogout } from "./auth.js";
-    import { listPlots, listProfiles, listAssignments, createPlot, updatePlot, deletePlot, assignPlot, unassignPlot } from "./db.js";
+    <nav class="sbNav">
+      <a class="sbLink" href="index.html">Dashboard</a>
+      <a class="sbLink active" href="plots.html">Plots</a>
+      <a class="sbLink" href="users.html">Users</a>
+      <a class="sbLink" href="payments.html">Payments</a>
+      <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+    </nav>
 
-    await requireRole(["admin"]);
-    wireLogout();
+    <div class="sbFoot">
+      <button class="btn ghost" id="btnLogout">Logout</button>
+    </div>
+  </aside>
 
-    const q = document.getElementById("q");
-    const tbody = document.querySelector("#tbl tbody");
+  <main class="main">
+    <header class="pageTop">
+      <h1>Plots</h1>
+    </header>
 
-    const modal = document.getElementById("modal");
-    const modalTitle = document.getElementById("modalTitle");
-    const modalBody = document.getElementById("modalBody");
-    const modalCancel = document.getElementById("modalCancel");
-    const modalOk = document.getElementById("modalOk");
+    <section class="card">
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Plot</th>
+              <th>Total Price</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
 
-    function openModal(title, bodyHtml, onSave){
-      modalTitle.textContent = title;
-      modalBody.innerHTML = bodyHtml;
-      modal.classList.remove("hidden");
-      modalOk.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
-      modalCancel.onclick = () => modal.classList.add("hidden");
-    }
+<script type="module">
+import { requireRole, wireLogout } from "./auth.js";
+import { supabase } from "./db.js";
 
-    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+await requireRole(["admin"]);
+wireLogout();
 
-    let plots=[], profiles=[], assigns=[];
-    async function refresh(){
-      [plots, profiles, assigns] = await Promise.all([listPlots(), listProfiles(), listAssignments()]);
-      render();
-    }
+await supabase.rpc("update_plot_payment_status");
 
-    function ownerForPlot(plotId){
-      const a = assigns.find(x => x.plot_id === plotId);
-      if (!a) return null;
-      return profiles.find(p => p.id === a.user_id) || null;
-    }
+const { data: plots } = await supabase
+  .from("plots")
+  .select("*")
+  .order("plot");
 
-    function render(){
-      const s = (q.value||"").trim().toLowerCase();
-      const rows = plots.filter(p => (p.plot||"").toLowerCase().includes(s));
+function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-      tbody.innerHTML = rows.map(p => {
-        const owner = ownerForPlot(p.id);
-        return `
-          <tr>
-            <td><strong>${p.plot}</strong></td>
-            <td>${p.status}</td>
-            <td>${owner?.name || "-"}</td>
-            <td>${owner?.phone || "-"}</td>
-            <td class="right">${money(p.total_price)}</td>
-            <td class="right">
-              <button class="btn small ghost" data-act="edit" data-id="${p.id}">Edit</button>
-              <button class="btn small ghost" data-act="assign" data-id="${p.id}">Assign</button>
-              <button class="btn small" data-act="del" data-id="${p.id}">Delete</button>
-            </td>
-          </tr>
-        `;
-      }).join("");
-    }
+const tbody = document.getElementById("tbody");
 
-    q.addEventListener("input", render);
-
-    document.getElementById("btnAdd").addEventListener("click", () => {
-      openModal("Add Plot", `
-        <div class="field"><label>Plot</label><input id="mPlot" /></div>
-        <div class="field"><label>Status</label>
-          <select id="mStatus"><option>Available</option><option>Assigned</option><option>Sold</option></select>
-        </div>
-        <div class="field"><label>Total Price (₹)</label><input id="mTotal" type="number" min="0" /></div>
-        <div class="field"><label>Location</label><input id="mLoc" /></div>
-        <div class="field"><label>Notes</label><input id="mNotes" /></div>
-      `, async () => {
-        const plot = document.getElementById("mPlot").value.trim();
-        const status = document.getElementById("mStatus").value;
-        const total_price = Number(document.getElementById("mTotal").value||0);
-        const location = document.getElementById("mLoc").value.trim();
-        const notes = document.getElementById("mNotes").value.trim();
-        if (!plot) return alert("Enter plot");
-        if (!(total_price>0)) return alert("Enter total price");
-        await createPlot({ plot, status, total_price, location, notes });
-      });
-    });
-
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button[data-act]");
-      if (!btn) return;
-      const id = btn.dataset.id;
-      const act = btn.dataset.act;
-      const p = plots.find(x => x.id === id);
-      if (!p) return;
-
-      if (act === "del"){
-        if (!confirm("Delete plot?")) return;
-        await deletePlot(id);
-        await refresh();
-      }
-
-      if (act === "edit"){
-        openModal("Edit Plot", `
-          <div class="field"><label>Plot</label><input id="mPlot" value="${p.plot}" /></div>
-          <div class="field"><label>Status</label>
-            <select id="mStatus">
-              <option ${p.status==="Available"?"selected":""}>Available</option>
-              <option ${p.status==="Assigned"?"selected":""}>Assigned</option>
-              <option ${p.status==="Sold"?"selected":""}>Sold</option>
-            </select>
-          </div>
-          <div class="field"><label>Total Price (₹)</label><input id="mTotal" type="number" min="0" value="${p.total_price||0}" /></div>
-          <div class="field"><label>Location</label><input id="mLoc" value="${p.location||""}" /></div>
-          <div class="field"><label>Notes</label><input id="mNotes" value="${p.notes||""}" /></div>
-        `, async () => {
-          await updatePlot(id, {
-            plot: document.getElementById("mPlot").value.trim(),
-            status: document.getElementById("mStatus").value,
-            total_price: Number(document.getElementById("mTotal").value||0),
-            location: document.getElementById("mLoc").value.trim(),
-            notes: document.getElementById("mNotes").value.trim(),
-          });
-        });
-      }
-
-      if (act === "assign"){
-        const owner = ownerForPlot(id);
-        const userOpts = profiles
-          .filter(u => u.role !== "admin")
-          .map(u => `<option value="${u.id}" ${owner?.id===u.id?"selected":""}>${u.name||u.id} • ${u.phone||""}</option>`)
-          .join("");
-
-        openModal(`Assign Plot • ${p.plot}`, `
-          <div class="field"><label>User</label>
-            <select id="mUser"><option value="">(No owner)</option>${userOpts}</select>
-          </div>
-          <div class="help">User must exist in Auth + Profiles.</div>
-        `, async () => {
-          const uid = document.getElementById("mUser").value || null;
-          if (!uid) {
-            if (owner) await unassignPlot(owner.id, id);
-          } else {
-            await assignPlot(uid, id);
-          }
-        });
-      }
-    });
-
-    await refresh();
-  </script>
+tbody.innerHTML = plots.map(p=>`
+  <tr class="${p.payment_status}">
+    <td><strong>${p.plot}</strong></td>
+    <td>${money(p.total_price)}</td>
+    <td>
+      <span class="badge ${p.payment_status}">
+        ${p.payment_status}
+      </span>
+    </td>
+  </tr>
+`).join("");
+</script>
 </body>
 </html>
