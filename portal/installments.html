@@ -39,6 +39,7 @@
             <thead>
               <tr>
                 <th>Plot</th>
+                <th>Payment Status</th>
                 <th>Start</th>
                 <th>Frequency</th>
                 <th class="right">Months</th>
@@ -52,7 +53,7 @@
       </section>
 
       <section class="card" style="margin-top:14px;">
-        <div class="cardHeader"><h2>Schedule (40 months + Final Remaining)</h2></div>
+        <div class="cardHeader"><h2>Schedule</h2></div>
         <div class="tableWrap">
           <table class="table">
             <thead>
@@ -68,7 +69,7 @@
           </table>
         </div>
         <div class="help" style="padding:10px;color:#666;">
-          Status is calculated using your payments (Paid vs cumulative due).
+          Payment Status (overdue/delayed) is shown from admin system calculation.
         </div>
       </section>
     </main>
@@ -85,38 +86,31 @@
     document.getElementById("who").textContent = profile.name || "User";
 
     const [plots, payments, plans] = await Promise.all([
-      listPlots(),           // RLS: only assigned
-      listPayments(),        // RLS: only own
-      listInstallmentPlans() // RLS: only own
+      listPlots(), listPayments(), listInstallmentPlans()
     ]);
 
     function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
-    function addMonths(dt, m){
-      const d = new Date(dt);
-      d.setMonth(d.getMonth() + m);
-      return d;
-    }
+    function addMonths(dt, m){ const d = new Date(dt); d.setMonth(d.getMonth()+m); return d; }
     function fmtDate(d){ return d.toISOString().slice(0,10); }
 
     // Paid per plot
     const paidByPlot = {};
-    for (const p of payments) {
-      paidByPlot[p.plot_id] = (paidByPlot[p.plot_id] || 0) + Number(p.amount||0);
-    }
+    for (const p of payments) paidByPlot[p.plot_id] = (paidByPlot[p.plot_id]||0) + Number(p.amount||0);
 
-    // Render plan table (show final remainder too)
+    // Plans table with plot payment status
     const planBody = document.getElementById("planBody");
     planBody.innerHTML = plans.map(plan => {
       const plot = plots.find(p => p.id === plan.plot_id);
       const total = Number(plot?.total_price || 0);
-
-      const n = Number(plan.installments_count || 0);      // should be 40
-      const amt = Number(plan.installment_amount || 0);    // monthly amount
+      const n = Number(plan.installments_count || 0);
+      const amt = Number(plan.installment_amount || 0);
       const remainder = Math.max(total - (amt * n), 0);
+      const ps = plot?.payment_status || "active";
 
       return `
-        <tr>
+        <tr class="${ps}">
           <td><strong>${plot?.plot || "-"}</strong></td>
+          <td><span class="badge ${ps}">${ps}</span></td>
           <td>${plan.start_date}</td>
           <td>${plan.frequency}</td>
           <td class="right">${n}</td>
@@ -124,43 +118,37 @@
           <td class="right">${remainder > 0 ? money(remainder) : "-"}</td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="6">No installment plan set. Ask admin to set your plan.</td></tr>`;
+    }).join("") || `<tr><td colspan="7">No installment plan set. Ask admin.</td></tr>`;
 
-    // Build schedule: months 1..N + month N+1 remainder
+    // Build schedule (40 + final remainder)
     const sched = [];
     for (const plan of plans) {
       const plot = plots.find(p => p.id === plan.plot_id);
       if (!plot) continue;
 
       const total = Number(plot.total_price || 0);
-      const n = Number(plan.installments_count || 0);     // set as 40
+      const n = Number(plan.installments_count || 0);
       const amt = Number(plan.installment_amount || 0);
       const remainder = Math.max(total - (amt * n), 0);
 
-      // Normal installments 1..N
-      for (let i = 1; i <= n; i++) {
-        const due = addMonths(new Date(plan.start_date), i - 1);
+      for (let i=1; i<=n; i++){
         sched.push({
           plot_id: plan.plot_id,
           label: `${i}`,
-          due_date: fmtDate(due),
-          due_amount: amt,
+          due_date: fmtDate(addMonths(new Date(plan.start_date), i-1)),
+          due_amount: amt
         });
       }
-
-      // Final remaining installment on month N+1 (here 41)
-      if (remainder > 0) {
-        const dueFinal = addMonths(new Date(plan.start_date), n); // +40 months => 41st due
+      if (remainder > 0){
         sched.push({
           plot_id: plan.plot_id,
-          label: `${n + 1} (Final)`,
-          due_date: fmtDate(dueFinal),
-          due_amount: remainder,
+          label: `${n+1} (Final)`,
+          due_date: fmtDate(addMonths(new Date(plan.start_date), n)),
+          due_amount: remainder
         });
       }
     }
 
-    // Determine status using cumulative due vs paid
     sched.sort((a,b)=> a.due_date.localeCompare(b.due_date));
     const cumulativeDue = {};
     const schedBody = document.getElementById("schedBody");
@@ -170,9 +158,10 @@
       const paid = paidByPlot[s.plot_id] || 0;
       const status = paid >= cumulativeDue[s.plot_id] ? "Paid" : "Pending";
       const plot = plots.find(p => p.id === s.plot_id);
+      const ps = plot?.payment_status || "active";
 
       return `
-        <tr>
+        <tr class="${ps}">
           <td>${s.label}</td>
           <td><strong>${plot?.plot || "-"}</strong></td>
           <td>${s.due_date}</td>
@@ -180,7 +169,7 @@
           <td>${status}</td>
         </tr>
       `;
-    }).join("") || `<tr><td colspan="5">No schedule available.</td></tr>`;
+    }).join("") || `<tr><td colspan="5">No schedule available</td></tr>`;
   </script>
 </body>
 </html>
