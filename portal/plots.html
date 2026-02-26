@@ -19,6 +19,7 @@
       <a class="sbLink" href="users.html">Users</a>
       <a class="sbLink" href="payments.html">Payments</a>
       <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+      <a class="sbLink" href="installment-plans.html">Installment Plans</a>
     </nav>
 
     <div class="sbFoot">
@@ -29,6 +30,9 @@
   <main class="main">
     <header class="pageTop">
       <h1>Plots</h1>
+      <div class="actions">
+        <button class="btn" id="btnAdd">+ Add Plot</button>
+      </div>
     </header>
 
     <section class="card">
@@ -37,8 +41,11 @@
           <thead>
             <tr>
               <th>Plot</th>
-              <th>Total Price</th>
+              <th class="right">Total Price</th>
               <th>Status</th>
+              <th>Location</th>
+              <th>Notes</th>
+              <th class="right">Actions</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -48,6 +55,17 @@
   </main>
 </div>
 
+<div class="modal hidden" id="modal">
+  <div class="modalBox">
+    <div class="modalTitle" id="mtitle">Plot</div>
+    <div id="mbody"></div>
+    <div class="modalActions">
+      <button class="btn ghost" id="mcancel">Cancel</button>
+      <button class="btn" id="mok">Save</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { requireRole, wireLogout } from "./auth.js";
 import { supabase } from "./db.js";
@@ -55,28 +73,110 @@ import { supabase } from "./db.js";
 await requireRole(["admin"]);
 wireLogout();
 
-await supabase.rpc("update_plot_payment_status");
-
-const { data: plots } = await supabase
-  .from("plots")
-  .select("*")
-  .order("plot");
+const tbody = document.getElementById("tbody");
+const modal = document.getElementById("modal");
+const mtitle = document.getElementById("mtitle");
+const mbody = document.getElementById("mbody");
+const mcancel = document.getElementById("mcancel");
+const mok = document.getElementById("mok");
 
 function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-const tbody = document.getElementById("tbody");
+function openModal(title, html, onSave){
+  mtitle.textContent = title;
+  mbody.innerHTML = html;
+  modal.classList.remove("hidden");
+  mok.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
+  mcancel.onclick = () => modal.classList.add("hidden");
+}
 
-tbody.innerHTML = plots.map(p=>`
-  <tr class="${p.payment_status}">
-    <td><strong>${p.plot}</strong></td>
-    <td>${money(p.total_price)}</td>
-    <td>
-      <span class="badge ${p.payment_status}">
-        ${p.payment_status}
-      </span>
-    </td>
-  </tr>
-`).join("");
+let plots = [];
+
+async function refresh(){
+  // auto refresh status
+  await supabase.rpc("update_plot_payment_status");
+
+  const res = await supabase
+    .from("plots")
+    .select("*")
+    .order("plot");
+
+  if (res.error) { alert(res.error.message); throw res.error; }
+  plots = res.data || [];
+
+  tbody.innerHTML = plots.map(p => `
+    <tr class="${p.payment_status || 'active'}">
+      <td><strong>${p.plot}</strong></td>
+      <td class="right">${money(p.total_price)}</td>
+      <td><span class="badge ${p.payment_status || 'active'}">${p.payment_status || 'active'}</span></td>
+      <td>${p.location || "-"}</td>
+      <td>${p.notes || "-"}</td>
+      <td class="right">
+        <button class="btn small ghost" data-edit="${p.id}">Edit</button>
+        <button class="btn small ghost" data-del="${p.id}">Delete</button>
+      </td>
+    </tr>
+  `).join("") || `<tr><td colspan="6">No plots</td></tr>`;
+}
+
+document.getElementById("btnAdd").onclick = () => {
+  openModal("Add Plot", `
+    <div class="field"><label>Plot Name</label><input id="plot" /></div>
+    <div class="field"><label>Total Price</label><input id="price" type="number" min="0" /></div>
+    <div class="field"><label>Location</label><input id="loc" /></div>
+    <div class="field"><label>Notes</label><input id="notes" /></div>
+  `, async () => {
+    const row = {
+      plot: document.getElementById("plot").value.trim(),
+      total_price: Number(document.getElementById("price").value || 0),
+      location: document.getElementById("loc").value.trim(),
+      notes: document.getElementById("notes").value.trim(),
+      payment_status: "active"
+    };
+    if (!row.plot) return alert("Enter plot name");
+
+    const r = await supabase.from("plots").insert(row);
+    if (r.error) return alert(r.error.message);
+  });
+};
+
+document.addEventListener("click", async (e) => {
+  const editBtn = e.target.closest("button[data-edit]");
+  const delBtn = e.target.closest("button[data-del]");
+
+  if (editBtn) {
+    const id = editBtn.dataset.edit;
+    const p = plots.find(x => x.id === id);
+    if (!p) return;
+
+    openModal("Edit Plot", `
+      <div class="field"><label>Plot Name</label><input id="plot" value="${p.plot || ""}" /></div>
+      <div class="field"><label>Total Price</label><input id="price" type="number" min="0" value="${p.total_price || 0}" /></div>
+      <div class="field"><label>Location</label><input id="loc" value="${p.location || ""}" /></div>
+      <div class="field"><label>Notes</label><input id="notes" value="${p.notes || ""}" /></div>
+    `, async () => {
+      const upd = {
+        plot: document.getElementById("plot").value.trim(),
+        total_price: Number(document.getElementById("price").value || 0),
+        location: document.getElementById("loc").value.trim(),
+        notes: document.getElementById("notes").value.trim()
+      };
+      if (!upd.plot) return alert("Enter plot name");
+      const r = await supabase.from("plots").update(upd).eq("id", id);
+      if (r.error) return alert(r.error.message);
+    });
+  }
+
+  if (delBtn) {
+    const id = delBtn.dataset.del;
+    if (!confirm("Delete this plot?")) return;
+    const r = await supabase.from("plots").delete().eq("id", id);
+    if (r.error) return alert(r.error.message);
+    await refresh();
+  }
+});
+
+await refresh();
 </script>
 </body>
 </html>
