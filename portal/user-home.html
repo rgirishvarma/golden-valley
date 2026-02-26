@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Golden Valley • User Home</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
@@ -11,18 +11,15 @@
     <aside class="sidebar">
       <div class="sbBrand">
         <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">User Portal</div>
-        </div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">User Portal</div></div>
       </div>
 
       <nav class="sbNav">
         <a class="sbLink active" href="user-home.html">User Home</a>
-        <a class="sbLink" href="profile.html">Profile</a>
         <a class="sbLink" href="user.html">My Plots</a>
         <a class="sbLink" href="my-payments.html">My Payments</a>
         <a class="sbLink" href="installments.html">Installments</a>
+        <a class="sbLink" href="profile.html">Profile</a>
       </nav>
 
       <div class="sbFoot">
@@ -51,6 +48,7 @@
               <tr>
                 <th>Plot</th>
                 <th>Status</th>
+                <th>Payment Status</th>
                 <th>Location</th>
                 <th class="right">Total</th>
                 <th class="right">Paid</th>
@@ -70,45 +68,41 @@
 
     const { profile } = await requireRole(["user","admin"]);
     wireLogout();
-
-    if (profile.role === "admin") {
-      window.location.href = "./index.html";
-    }
+    if (profile.role === "admin") window.location.href = "./index.html";
 
     document.getElementById("who").textContent = profile.name || "User";
 
-    const plots = await listPlots();      // RLS: only assigned
-    const payments = await listPayments(); // RLS: only own
+    const plots = await listPlots();       // includes payment_status
+    const payments = await listPayments(); // only own due to RLS
 
     function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
+    let totalPrice = 0, totalPaid = 0;
+
     const tbody = document.getElementById("plotBody");
-
-    let totalPrice = 0;
-    let totalPaid = 0;
-
     tbody.innerHTML = plots.map(pl => {
       const price = Number(pl.total_price || 0);
-      const paid = payments
-        .filter(p => p.plot_id === pl.id)
+      const paid = payments.filter(p => p.plot_id === pl.id)
         .reduce((s,p)=> s + Number(p.amount||0), 0);
-
       const bal = Math.max(price - paid, 0);
 
       totalPrice += price;
       totalPaid += paid;
 
+      const ps = pl.payment_status || "active";
+
       return `
-        <tr>
+        <tr class="${ps}">
           <td><strong>${pl.plot}</strong></td>
-          <td>${pl.status}</td>
+          <td>${pl.status || "-"}</td>
+          <td><span class="badge ${ps}">${ps}</span></td>
           <td>${pl.location || "-"}</td>
           <td class="right">${money(price)}</td>
           <td class="right">${money(paid)}</td>
           <td class="right">${money(bal)}</td>
         </tr>
       `;
-    }).join("");
+    }).join("") || `<tr><td colspan="7">No assigned plots</td></tr>`;
 
     document.getElementById("stPlots").textContent = plots.length;
     document.getElementById("stTotal").textContent = money(totalPrice);
@@ -117,4 +111,3 @@
   </script>
 </body>
 </html>
-
