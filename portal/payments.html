@@ -1,204 +1,198 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Golden Valley • Payments</title>
+  <title>Payments</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sbBrand">
-        <div class="sbLogo">GV</div>
-        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sbBrand">
+      <div class="sbLogo">GV</div>
+      <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
+    </div>
+    <nav class="sbNav">
+      <a class="sbLink" href="index.html">Dashboard</a>
+      <a class="sbLink" href="plots.html">Plots</a>
+      <a class="sbLink" href="users.html">Users</a>
+      <a class="sbLink active" href="payments.html">Payments</a>
+      <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+      <a class="sbLink" href="installment-plans.html">Installment Plans</a>
+    </nav>
+    <div class="sbFoot">
+      <button class="btn ghost" id="btnLogout">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="pageTop">
+      <h1>Payments</h1>
+      <div class="actions">
+        <button class="btn" id="btnAdd">+ Add Payment</button>
       </div>
+    </header>
 
-      <nav class="sbNav">
-        <a class="sbLink" href="index.html">Dashboard</a>
-        <a class="sbLink" href="plots.html">Plots</a>
-        <a class="sbLink" href="users.html">Users</a>
-        <a class="sbLink active" href="payments.html">Payments</a>
-        <a class="sbLink" href="payment-summary.html">Payment Summary</a>
-      </nav>
-
-      <div class="sbFoot">
-        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+    <section class="card">
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>User</th>
+              <th>Plot</th>
+              <th class="right">Amount</th>
+              <th>Mode</th>
+              <th>Note</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
-    </aside>
+    </section>
+  </main>
+</div>
 
-    <main class="main">
-      <header class="pageTop">
-        <h1>Payments</h1>
-        <div class="actions">
-          <button class="btn" id="btnAddPayment">+ Add Payment</button>
-          <button class="btn ghost" id="btnExportPayments">Export CSV</button>
-        </div>
-      </header>
-
-      <section class="card">
-        <div class="cardHeader">
-          <h2>All payments</h2>
-          <div class="searchRow">
-            <input id="paySearch" class="input" placeholder="Search by plot / name / phone" />
-          </div>
-        </div>
-
-        <div class="tableWrap">
-          <table class="table" id="paymentsTable">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>User</th>
-                <th>Phone</th>
-                <th>Plot</th>
-                <th class="right">Amount</th>
-                <th>Mode</th>
-                <th>Note</th>
-                <th class="right">Actions</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
-
-  <!-- modal -->
-  <div class="modal hidden" id="modal">
-    <div class="modalBox">
-      <div class="modalTitle" id="modalTitle">Modal</div>
-      <div id="modalBody"></div>
-      <div class="modalActions">
-        <button class="btn ghost" id="modalCancel">Cancel</button>
-        <button class="btn" id="modalOk">Save</button>
-      </div>
+<div class="modal hidden" id="modal">
+  <div class="modalBox">
+    <div class="modalTitle" id="mtitle">Payment</div>
+    <div id="mbody"></div>
+    <div class="modalActions">
+      <button class="btn ghost" id="mcancel">Cancel</button>
+      <button class="btn" id="mok">Save</button>
     </div>
   </div>
+</div>
 
-  <script type="module">
-    import { requireRole, wireLogout } from "./auth.js";
-    import { listProfiles, listPlots, listPayments, createPayment, deletePayment } from "./db.js";
+<script type="module">
+import { requireRole, wireLogout } from "./auth.js";
+import { supabase } from "./db.js";
 
-    await requireRole(["admin"]);
-    wireLogout();
+await requireRole(["admin"]);
+wireLogout();
 
-    const tbody = document.querySelector("#paymentsTable tbody");
-    const search = document.getElementById("paySearch");
+const tbody = document.getElementById("tbody");
+const modal = document.getElementById("modal");
+const mtitle = document.getElementById("mtitle");
+const mbody = document.getElementById("mbody");
+const mcancel = document.getElementById("mcancel");
+const mok = document.getElementById("mok");
 
-    const modal = document.getElementById("modal");
-    const modalTitle = document.getElementById("modalTitle");
-    const modalBody = document.getElementById("modalBody");
-    const modalCancel = document.getElementById("modalCancel");
-    const modalOk = document.getElementById("modalOk");
+function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+function openModal(title, html, onSave){
+  mtitle.textContent = title;
+  mbody.innerHTML = html;
+  modal.classList.remove("hidden");
+  mok.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
+  mcancel.onclick = () => modal.classList.add("hidden");
+}
 
-    function openModal(title, bodyHtml, onSave){
-      modalTitle.textContent = title;
-      modalBody.innerHTML = bodyHtml;
-      modal.classList.remove("hidden");
-      modalOk.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
-      modalCancel.onclick = () => modal.classList.add("hidden");
-    }
+let users=[], plots=[], payments=[];
 
-    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+async function refresh(){
+  const u = await supabase.from("profiles").select("id,name,phone,role").order("name");
+  const p = await supabase.from("plots").select("id,plot").order("plot");
+  const pay = await supabase.from("payments").select("*").order("pay_date", { ascending:false });
 
-    let profiles=[], plots=[], payments=[];
-    async function refresh(){
-      [profiles, plots, payments] = await Promise.all([listProfiles(), listPlots(), listPayments()]);
-      render();
-    }
+  if (u.error) throw u.error;
+  if (p.error) throw p.error;
+  if (pay.error) throw pay.error;
 
-    function render(){
-      const q = (search.value||"").trim().toLowerCase();
+  users = u.data || [];
+  plots = p.data || [];
+  payments = pay.data || [];
 
-      const rows = payments.map(p => {
-        const u = profiles.find(x => x.id === p.user_id);
-        const pl = plots.find(x => x.id === p.plot_id);
-        const txt = `${u?.name||""} ${u?.phone||""} ${pl?.plot||""}`.toLowerCase();
-        return { p, u, pl, txt };
-      })
-      .filter(r => r.txt.includes(q))
-      .sort((a,b) => new Date(b.p.pay_date) - new Date(a.p.pay_date));
+  tbody.innerHTML = payments.map(pm=>{
+    const user = users.find(x=>x.id===pm.user_id);
+    const plot = plots.find(x=>x.id===pm.plot_id);
+    return `
+      <tr>
+        <td>${pm.pay_date}</td>
+        <td>${user?.name || "-"}<br><small>${user?.phone||""}</small></td>
+        <td><strong>${plot?.plot || "-"}</strong></td>
+        <td class="right">${money(pm.amount)}</td>
+        <td>${pm.mode || "-"}</td>
+        <td>${pm.note || "-"}</td>
+        <td class="right">
+          <button class="btn small ghost" data-edit="${pm.id}">Edit</button>
+          <button class="btn small ghost" data-del="${pm.id}">Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="7">No payments</td></tr>`;
+}
 
-      tbody.innerHTML = rows.map(r => `
-        <tr>
-          <td>${r.p.pay_date}</td>
-          <td>${r.u?.name || "-"}</td>
-          <td>${r.u?.phone || "-"}</td>
-          <td><strong>${r.pl?.plot || "-"}</strong></td>
-          <td class="right">${money(r.p.amount)}</td>
-          <td>${r.p.mode || "-"}</td>
-          <td>${r.p.note || "-"}</td>
-          <td class="right">
-            <button class="btn small" data-del="${r.p.id}">Delete</button>
-          </td>
-        </tr>
-      `).join("");
-    }
+function userOptions(){
+  return users
+    .filter(u=>u.role!=="admin")
+    .map(u=>`<option value="${u.id}">${u.name||u.id} • ${u.phone||""}</option>`)
+    .join("");
+}
+function plotOptions(){
+  return plots.map(p=>`<option value="${p.id}">${p.plot}</option>`).join("");
+}
 
-    search.addEventListener("input", render);
+document.getElementById("btnAdd").onclick = () => {
+  openModal("Add Payment", `
+    <div class="field"><label>User</label><select id="u">${userOptions()}</select></div>
+    <div class="field"><label>Plot</label><select id="p">${plotOptions()}</select></div>
+    <div class="field"><label>Date</label><input id="d" type="date" /></div>
+    <div class="field"><label>Amount</label><input id="a" type="number" min="1" /></div>
+    <div class="field"><label>Mode</label><input id="m" placeholder="cash/upi/bank" /></div>
+    <div class="field"><label>Note</label><input id="n" placeholder="optional" /></div>
+  `, async () => {
+    const row = {
+      user_id: document.getElementById("u").value,
+      plot_id: document.getElementById("p").value,
+      pay_date: document.getElementById("d").value,
+      amount: Number(document.getElementById("a").value||0),
+      mode: document.getElementById("m").value.trim(),
+      note: document.getElementById("n").value.trim()
+    };
+    if (!row.pay_date) return alert("Select date");
+    if (!(row.amount>0)) return alert("Enter amount");
+    const res = await supabase.from("payments").insert(row);
+    if (res.error) return alert(res.error.message);
+  });
+};
 
-    document.getElementById("btnAddPayment").addEventListener("click", () => {
-      const userOpts = profiles.filter(u => u.role !== "admin")
-        .map(u => `<option value="${u.id}">${u.name||u.id} • ${u.phone||""}</option>`).join("");
+document.addEventListener("click", async (e)=>{
+  const edit = e.target.closest("button[data-edit]");
+  const del = e.target.closest("button[data-del]");
 
-      const plotOpts = plots
-        .map(pl => `<option value="${pl.id}">${pl.plot}</option>`).join("");
+  if (edit){
+    const id = edit.dataset.edit;
+    const pm = payments.find(x=>x.id===id);
+    if (!pm) return;
 
-      openModal("Add Payment", `
-        <div class="field"><label>User</label><select id="mUser">${userOpts}</select></div>
-        <div class="field"><label>Plot</label><select id="mPlot">${plotOpts}</select></div>
-        <div class="field"><label>Date</label><input id="mDate" type="date" /></div>
-        <div class="field"><label>Amount (₹)</label><input id="mAmt" type="number" min="1" /></div>
-        <div class="field"><label>Mode</label>
-          <select id="mMode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select>
-        </div>
-        <div class="field"><label>Note</label><input id="mNote" placeholder="Advance payment" /></div>
-      `, async () => {
-        const user_id = document.getElementById("mUser").value;
-        const plot_id = document.getElementById("mPlot").value;
-        const pay_date = document.getElementById("mDate").value || new Date().toISOString().slice(0,10);
-        const amount = Number(document.getElementById("mAmt").value||0);
-        const mode = document.getElementById("mMode").value;
-        const note = document.getElementById("mNote").value.trim();
-        if (!user_id || !plot_id) return alert("Select user and plot");
-        if (!(amount > 0)) return alert("Enter amount");
-        await createPayment({ user_id, plot_id, pay_date, amount, mode, note });
-      });
+    openModal("Edit Payment", `
+      <div class="field"><label>Date</label><input id="d" type="date" value="${pm.pay_date||""}" /></div>
+      <div class="field"><label>Amount</label><input id="a" type="number" min="1" value="${pm.amount||0}" /></div>
+      <div class="field"><label>Mode</label><input id="m" value="${pm.mode||""}" /></div>
+      <div class="field"><label>Note</label><input id="n" value="${pm.note||""}" /></div>
+    `, async ()=>{
+      const upd = {
+        pay_date: document.getElementById("d").value,
+        amount: Number(document.getElementById("a").value||0),
+        mode: document.getElementById("m").value.trim(),
+        note: document.getElementById("n").value.trim()
+      };
+      const res = await supabase.from("payments").update(upd).eq("id", id);
+      if (res.error) return alert(res.error.message);
     });
+  }
 
-    document.addEventListener("click", async (e) => {
-      const btn = e.target.closest("button[data-del]");
-      if (!btn) return;
-      const id = btn.getAttribute("data-del");
-      if (!confirm("Delete payment?")) return;
-      await deletePayment(id);
-      await refresh();
-    });
-
-    document.getElementById("btnExportPayments").addEventListener("click", () => {
-      const rows = [["Date","User","Phone","Plot","Amount","Mode","Note"]];
-      payments.forEach(p => {
-        const u = profiles.find(x => x.id === p.user_id);
-        const pl = plots.find(x => x.id === p.plot_id);
-        rows.push([p.pay_date, u?.name||"", u?.phone||"", pl?.plot||"", p.amount, p.mode||"", p.note||""]);
-      });
-
-      const csv = rows.map(r => r.map(v => {
-        const s = String(v ?? "");
-        return /[",\n]/.test(s) ? `"${s.replaceAll('"','""')}"` : s;
-      }).join(",")).join("\n");
-
-      const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = "golden-valley-payments.csv";
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-    });
-
+  if (del){
+    const id = del.dataset.del;
+    if (!confirm("Delete this payment?")) return;
+    const res = await supabase.from("payments").delete().eq("id", id);
+    if (res.error) return alert(res.error.message);
     await refresh();
-  </script>
+  }
+});
+
+await refresh();
+</script>
 </body>
 </html>
