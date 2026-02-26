@@ -43,6 +43,7 @@
               <th>Plot</th>
               <th class="right">Total Price</th>
               <th>Status</th>
+              <th>Assigned To</th>
               <th>Location</th>
               <th>Notes</th>
               <th class="right">Actions</th>
@@ -57,7 +58,7 @@
 
 <div class="modal hidden" id="modal">
   <div class="modalBox">
-    <div class="modalTitle" id="mtitle">Plot</div>
+    <div class="modalTitle" id="mtitle">Modal</div>
     <div id="mbody"></div>
     <div class="modalActions">
       <button class="btn ghost" id="mcancel">Cancel</button>
@@ -91,32 +92,50 @@ function openModal(title, html, onSave){
 }
 
 let plots = [];
+let users = [];
+let assigns = [];
 
 async function refresh(){
-  // auto refresh status
+  // refresh status
   await supabase.rpc("update_plot_payment_status");
 
-  const res = await supabase
-    .from("plots")
-    .select("*")
-    .order("plot");
+  const [p, u, a] = await Promise.all([
+    supabase.from("plots").select("*").order("plot"),
+    supabase.from("profiles").select("id,name,phone,role").order("name"),
+    supabase.from("plot_assignments").select("plot_id,user_id")
+  ]);
 
-  if (res.error) { alert(res.error.message); throw res.error; }
-  plots = res.data || [];
+  if (p.error) throw p.error;
+  if (u.error) throw u.error;
+  if (a.error) throw a.error;
 
-  tbody.innerHTML = plots.map(p => `
-    <tr class="${p.payment_status || 'active'}">
-      <td><strong>${p.plot}</strong></td>
-      <td class="right">${money(p.total_price)}</td>
-      <td><span class="badge ${p.payment_status || 'active'}">${p.payment_status || 'active'}</span></td>
-      <td>${p.location || "-"}</td>
-      <td>${p.notes || "-"}</td>
-      <td class="right">
-        <button class="btn small ghost" data-edit="${p.id}">Edit</button>
-        <button class="btn small ghost" data-del="${p.id}">Delete</button>
-      </td>
-    </tr>
-  `).join("") || `<tr><td colspan="6">No plots</td></tr>`;
+  plots = p.data || [];
+  users = (u.data || []).filter(x=>x.role !== "admin");
+  assigns = a.data || [];
+
+  tbody.innerHTML = plots.map(pl => {
+    const asg = assigns.find(x => x.plot_id === pl.id);
+    const user = asg ? users.find(u=>u.id===asg.user_id) : null;
+
+    return `
+      <tr class="${pl.payment_status || 'active'}">
+        <td><strong>${pl.plot}</strong></td>
+        <td class="right">${money(pl.total_price)}</td>
+        <td><span class="badge ${pl.payment_status || 'active'}">${pl.payment_status || 'active'}</span></td>
+        <td>
+          ${user ? `${user.name || "-"}<br><small>${user.phone || ""}</small>` : "<em>Not Assigned</em>"}
+        </td>
+        <td>${pl.location || "-"}</td>
+        <td>${pl.notes || "-"}</td>
+        <td class="right">
+          <button class="btn small ghost" data-assign="${pl.id}">Assign</button>
+          <button class="btn small ghost" data-unassign="${pl.id}">Unassign</button>
+          <button class="btn small ghost" data-edit="${pl.id}">Edit</button>
+          <button class="btn small ghost" data-del="${pl.id}">Delete</button>
+        </td>
+      </tr>
+    `;
+  }).join("") || `<tr><td colspan="7">No plots</td></tr>`;
 }
 
 document.getElementById("btnAdd").onclick = () => {
@@ -134,32 +153,71 @@ document.getElementById("btnAdd").onclick = () => {
       payment_status: "active"
     };
     if (!row.plot) return alert("Enter plot name");
-
     const r = await supabase.from("plots").insert(row);
     if (r.error) return alert(r.error.message);
   });
 };
 
+function userOptions(selectedId){
+  return users.map(u => `
+    <option value="${u.id}" ${u.id===selectedId ? "selected" : ""}>
+      ${u.name || u.id} • ${u.phone || ""}
+    </option>
+  `).join("");
+}
+
 document.addEventListener("click", async (e) => {
   const editBtn = e.target.closest("button[data-edit]");
   const delBtn = e.target.closest("button[data-del]");
+  const asBtn = e.target.closest("button[data-assign]");
+  const unBtn = e.target.closest("button[data-unassign]");
+
+  if (asBtn) {
+    const plot_id = asBtn.dataset.assign;
+    const existing = assigns.find(x=>x.plot_id===plot_id);
+    const selectedUser = existing?.user_id || (users[0]?.id || "");
+
+    openModal("Assign Plot", `
+      <div class="help" style="color:#666;">Select user to assign this plot</div>
+      <div class="field">
+        <label>User</label>
+        <select id="u">${userOptions(selectedUser)}</select>
+      </div>
+    `, async () => {
+      const user_id = document.getElementById("u").value;
+      if (!user_id) return alert("Select user");
+
+      // Upsert assignment (delete old then insert)
+      await supabase.from("plot_assignments").delete().eq("plot_id", plot_id);
+      const r = await supabase.from("plot_assignments").insert({ plot_id, user_id });
+      if (r.error) return alert(r.error.message);
+    });
+  }
+
+  if (unBtn) {
+    const plot_id = unBtn.dataset.unassign;
+    if (!confirm("Unassign this plot?")) return;
+    const r = await supabase.from("plot_assignments").delete().eq("plot_id", plot_id);
+    if (r.error) return alert(r.error.message);
+    await refresh();
+  }
 
   if (editBtn) {
     const id = editBtn.dataset.edit;
-    const p = plots.find(x => x.id === id);
-    if (!p) return;
+    const pl = plots.find(x => x.id === id);
+    if (!pl) return;
 
     openModal("Edit Plot", `
-      <div class="field"><label>Plot Name</label><input id="plot" value="${p.plot || ""}" /></div>
-      <div class="field"><label>Total Price</label><input id="price" type="number" min="0" value="${p.total_price || 0}" /></div>
-      <div class="field"><label>Location</label><input id="loc" value="${p.location || ""}" /></div>
-      <div class="field"><label>Notes</label><input id="notes" value="${p.notes || ""}" /></div>
+      <div class="field"><label>Plot Name</label><input id="plot" value="${pl.plot || ""}" /></div>
+      <div class="field"><label>Total Price</label><input id="price" type="number" min="0" value="${pl.total_price || 0}" /></div>
+      <div class="field"><label>Location</label><input id="loc" value="${pl.location || ""}" /></div>
+      <div class="field"><label>Notes</label><input id="notes" value="${pl.notes || ""}" /></div>
     `, async () => {
       const upd = {
         plot: document.getElementById("plot").value.trim(),
         total_price: Number(document.getElementById("price").value || 0),
         location: document.getElementById("loc").value.trim(),
-        notes: document.getElementById("notes").value.trim()
+        notes: document.getElementById("notes").value.trim(),
       };
       if (!upd.plot) return alert("Enter plot name");
       const r = await supabase.from("plots").update(upd).eq("id", id);
