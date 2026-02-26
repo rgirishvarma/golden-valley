@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Installment Plans</title>
+  <link rel="stylesheet" href="portal.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sbBrand">
+        <div class="sbLogo">GV</div>
+        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
+      </div>
+      <nav class="sbNav">
+        <a class="sbLink" href="index.html">Dashboard</a>
+        <a class="sbLink" href="plots.html">Plots</a>
+        <a class="sbLink" href="users.html">Users</a>
+        <a class="sbLink" href="payments.html">Payments</a>
+        <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+        <a class="sbLink active" href="installment-plans.html">Installment Plans</a>
+      </nav>
+      <div class="sbFoot">
+        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="pageTop">
+        <h1>Installment Plans</h1>
+        <div class="actions">
+          <button class="btn" id="btnAdd">+ Add / Update Plan</button>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="tableWrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>User</th><th>Phone</th><th>Plot</th>
+                <th>Start</th><th>Freq</th>
+                <th class="right">Count</th><th class="right">Amount</th>
+                <th class="right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="modal">
+    <div class="modalBox">
+      <div class="modalTitle" id="mtitle">Plan</div>
+      <div id="mbody"></div>
+      <div class="modalActions">
+        <button class="btn ghost" id="mcancel">Cancel</button>
+        <button class="btn" id="mok">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { requireRole, wireLogout } from "./auth.js";
+    import { listProfiles, listPlots } from "./db.js";
+    import { listInstallmentPlans, upsertInstallmentPlan, deleteInstallmentPlan } from "./db.js";
+
+    await requireRole(["admin"]);
+    wireLogout();
+
+    const tbody = document.getElementById("tbody");
+    const modal = document.getElementById("modal");
+    const mtitle = document.getElementById("mtitle");
+    const mbody = document.getElementById("mbody");
+    const mcancel = document.getElementById("mcancel");
+    const mok = document.getElementById("mok");
+
+    function openModal(title, html, onSave){
+      mtitle.textContent = title;
+      mbody.innerHTML = html;
+      modal.classList.remove("hidden");
+      mok.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
+      mcancel.onclick = () => modal.classList.add("hidden");
+    }
+    function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+
+    let users=[], plots=[], plans=[];
+    async function refresh(){
+      [users, plots, plans] = await Promise.all([
+        listProfiles(),
+        listPlots(),
+        listInstallmentPlans()
+      ]);
+
+      tbody.innerHTML = plans.map(pl => {
+        const u = users.find(x=>x.id===pl.user_id);
+        const p = plots.find(x=>x.id===pl.plot_id);
+        return `
+          <tr>
+            <td>${u?.name || "-"}</td>
+            <td>${u?.phone || "-"}</td>
+            <td><strong>${p?.plot || "-"}</strong></td>
+            <td>${pl.start_date}</td>
+            <td>${pl.frequency}</td>
+            <td class="right">${pl.installments_count}</td>
+            <td class="right">${money(pl.installment_amount)}</td>
+            <td class="right"><button class="btn small" data-del="${pl.id}">Delete</button></td>
+          </tr>
+        `;
+      }).join("") || `<tr><td colspan="8">No plans.</td></tr>`;
+    }
+
+    document.getElementById("btnAdd").onclick = () => {
+      const userOpts = users.filter(u=>u.role!=="admin").map(u=>`<option value="${u.id}">${u.name||u.id} • ${u.phone||""}</option>`).join("");
+      const plotOpts = plots.map(p=>`<option value="${p.id}">${p.plot}</option>`).join("");
+
+      openModal("Add / Update Plan", `
+        <div class="field"><label>User</label><select id="u">${userOpts}</select></div>
+        <div class="field"><label>Plot</label><select id="p">${plotOpts}</select></div>
+        <div class="field"><label>Start Date</label><input id="d" type="date" /></div>
+        <div class="field"><label>Frequency</label>
+          <select id="f"><option value="monthly">monthly</option><option value="weekly">weekly</option></select>
+        </div>
+        <div class="field"><label>Installments Count</label><input id="c" type="number" min="1" /></div>
+        <div class="field"><label>Installment Amount (₹)</label><input id="a" type="number" min="1" /></div>
+      `, async () => {
+        const user_id = document.getElementById("u").value;
+        const plot_id = document.getElementById("p").value;
+        const start_date = document.getElementById("d").value;
+        const frequency = document.getElementById("f").value;
+        const installments_count = Number(document.getElementById("c").value||0);
+        const installment_amount = Number(document.getElementById("a").value||0);
+
+        if (!start_date) return alert("Pick start date");
+        if (!(installments_count>0)) return alert("Enter count");
+        if (!(installment_amount>0)) return alert("Enter amount");
+
+        await upsertInstallmentPlan({ user_id, plot_id, start_date, frequency, installments_count, installment_amount });
+      });
+    };
+
+    document.addEventListener("click", async (e) => {
+      const b = e.target.closest("button[data-del]");
+      if (!b) return;
+      if (!confirm("Delete plan?")) return;
+      await deleteInstallmentPlan(b.dataset.del);
+      await refresh();
+    });
+
+    await refresh();
+  </script>
+</body>
+</html>
