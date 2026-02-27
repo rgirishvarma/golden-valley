@@ -88,24 +88,29 @@ function openModal(title, html, onSave){
   mcancel.onclick = () => modal.classList.add("hidden");
 }
 
-let users=[], plots=[], payments=[];
+let users = [], plots = [], assignments = [], payments = [];
 
 async function refresh(){
-  const u = await supabase.from("profiles").select("id,name,phone,role").order("name");
-  const p = await supabase.from("plots").select("id,plot").order("plot");
-  const pay = await supabase.from("payments").select("*").order("pay_date", { ascending:false });
+  const [u, p, a, pay] = await Promise.all([
+    supabase.from("profiles").select("id,name,phone,role").order("name"),
+    supabase.from("plots").select("id,plot").order("plot"),
+    supabase.from("plot_assignments").select("user_id,plot_id"),
+    supabase.from("payments").select("*").order("pay_date", { ascending:false })
+  ]);
 
   if (u.error) throw u.error;
   if (p.error) throw p.error;
+  if (a.error) throw a.error;
   if (pay.error) throw pay.error;
 
-  users = u.data || [];
+  users = (u.data || []).filter(x => x.role !== "admin");
   plots = p.data || [];
+  assignments = a.data || [];
   payments = pay.data || [];
 
-  tbody.innerHTML = payments.map(pm=>{
-    const user = users.find(x=>x.id===pm.user_id);
-    const plot = plots.find(x=>x.id===pm.plot_id);
+  tbody.innerHTML = payments.map(pm => {
+    const user = users.find(x => x.id === pm.user_id);
+    const plot = plots.find(x => x.id === pm.plot_id);
     return `
       <tr>
         <td>${pm.pay_date}</td>
@@ -124,37 +129,72 @@ async function refresh(){
 }
 
 function userOptions(){
-  return users
-    .filter(u=>u.role!=="admin")
-    .map(u=>`<option value="${u.id}">${u.name||u.id} • ${u.phone||""}</option>`)
-    .join("");
+  return users.map(u => `
+    <option value="${u.id}">${u.name || u.id} • ${u.phone || ""}</option>
+  `).join("");
 }
-function plotOptions(){
-  return plots.map(p=>`<option value="${p.id}">${p.plot}</option>`).join("");
+
+function plotsAssignedToUser(userId){
+  const plotIds = assignments.filter(a => a.user_id === userId).map(a => a.plot_id);
+  return plots.filter(p => plotIds.includes(p.id));
+}
+
+function plotOptionsForUser(userId){
+  const list = plotsAssignedToUser(userId);
+  if (!list.length) return `<option value="">No assigned plots</option>`;
+  return list.map(p => `<option value="${p.id}">${p.plot}</option>`).join("");
 }
 
 document.getElementById("btnAdd").onclick = () => {
   openModal("Add Payment", `
-    <div class="field"><label>User</label><select id="u">${userOptions()}</select></div>
-    <div class="field"><label>Plot</label><select id="p">${plotOptions()}</select></div>
+    <div class="field"><label>User</label>
+      <select id="u">${userOptions()}</select>
+    </div>
+
+    <div class="field"><label>Assigned Plot</label>
+      <select id="p"></select>
+      <div class="help" style="font-size:12px;color:#666;">Only plots assigned to selected user are shown.</div>
+    </div>
+
     <div class="field"><label>Date</label><input id="d" type="date" /></div>
     <div class="field"><label>Amount</label><input id="a" type="number" min="1" /></div>
     <div class="field"><label>Mode</label><input id="m" placeholder="cash/upi/bank" /></div>
     <div class="field"><label>Note</label><input id="n" placeholder="optional" /></div>
   `, async () => {
+    const user_id = document.getElementById("u").value;
+    const plot_id = document.getElementById("p").value;
+
     const row = {
-      user_id: document.getElementById("u").value,
-      plot_id: document.getElementById("p").value,
+      user_id,
+      plot_id,
       pay_date: document.getElementById("d").value,
       amount: Number(document.getElementById("a").value||0),
       mode: document.getElementById("m").value.trim(),
       note: document.getElementById("n").value.trim()
     };
+
+    if (!row.user_id) return alert("Select user");
+    if (!row.plot_id) return alert("No plot selected (user has no assigned plot)");
     if (!row.pay_date) return alert("Select date");
     if (!(row.amount>0)) return alert("Enter amount");
+
     const res = await supabase.from("payments").insert(row);
     if (res.error) return alert(res.error.message);
+
+    // optional: refresh status after add
+    await supabase.rpc("update_plot_payment_status");
   });
+
+  // Wire dropdown dependency
+  const userSel = document.getElementById("u");
+  const plotSel = document.getElementById("p");
+
+  const refreshPlots = () => {
+    plotSel.innerHTML = plotOptionsForUser(userSel.value);
+  };
+
+  userSel.addEventListener("change", refreshPlots);
+  refreshPlots(); // initial load
 };
 
 document.addEventListener("click", async (e)=>{
@@ -167,6 +207,7 @@ document.addEventListener("click", async (e)=>{
     if (!pm) return;
 
     openModal("Edit Payment", `
+      <div class="help" style="color:#666;">User/Plot cannot be changed here. Delete and re-add if needed.</div>
       <div class="field"><label>Date</label><input id="d" type="date" value="${pm.pay_date||""}" /></div>
       <div class="field"><label>Amount</label><input id="a" type="number" min="1" value="${pm.amount||0}" /></div>
       <div class="field"><label>Mode</label><input id="m" value="${pm.mode||""}" /></div>
@@ -180,14 +221,19 @@ document.addEventListener("click", async (e)=>{
       };
       const res = await supabase.from("payments").update(upd).eq("id", id);
       if (res.error) return alert(res.error.message);
+
+      await supabase.rpc("update_plot_payment_status");
     });
   }
 
   if (del){
     const id = del.dataset.del;
     if (!confirm("Delete this payment?")) return;
+
     const res = await supabase.from("payments").delete().eq("id", id);
     if (res.error) return alert(res.error.message);
+
+    await supabase.rpc("update_plot_payment_status");
     await refresh();
   }
 });
