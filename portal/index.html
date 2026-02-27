@@ -35,7 +35,7 @@
       <h1>Admin Financial Dashboard</h1>
     </header>
 
-    <section class="grid2" style="grid-template-columns: repeat(4,1fr);">
+    <section class="grid2" style="grid-template-columns: repeat(6,1fr);">
       <div class="stat">
         <div class="statLabel">Total Revenue</div>
         <div class="statValue" id="stRevenue">₹0</div>
@@ -49,24 +49,42 @@
         <div class="statValue" id="stOutstanding">₹0</div>
       </div>
       <div class="stat">
-        <div class="statLabel">Overdue / Delayed</div>
-        <div class="statValue" id="stOverdueCount">0</div>
+        <div class="statLabel">Overdue</div>
+        <div class="statValue" id="stOverdue">0</div>
+      </div>
+      <div class="stat">
+        <div class="statLabel">Delayed</div>
+        <div class="statValue" id="stDelayed">0</div>
+      </div>
+      <div class="stat">
+        <div class="statLabel">Terminated</div>
+        <div class="statValue" id="stTerminated">0</div>
       </div>
     </section>
 
-    <section class="card" style="margin-top:20px;">
-      <div class="cardHeader"><h2>Delayed / Overdue Plots</h2></div>
+    <section class="card" style="margin-top:16px;">
+      <div class="cardHeader">
+        <h2>Overdue / Delayed / Terminated</h2>
+      </div>
+
       <div class="tableWrap">
         <table class="table">
           <thead>
             <tr>
               <th>Plot</th>
-              <th>Status</th>
+              <th>Payment Status</th>
+              <th>Owner</th>
+              <th>Email</th>
+              <th>Phone</th>
               <th class="right">Balance</th>
             </tr>
           </thead>
-          <tbody id="overdueBody"></tbody>
+          <tbody id="riskBody"></tbody>
         </table>
+      </div>
+
+      <div class="help" style="padding:10px;color:#666;">
+        Terminated plots become available and assignment is removed automatically.
       </div>
     </section>
   </main>
@@ -81,58 +99,100 @@ wireLogout();
 
 function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-// 🔥 Auto update status every time dashboard loads
+// ✅ Refresh payment statuses when dashboard loads
 await supabase.rpc("update_plot_payment_status");
 
-// Fetch summary
-const { data: summary } = await supabase
+// Summary view (has plot_id, plot, total_price, total_paid, balance, user_id maybe)
+const { data: summary, error: sumErr } = await supabase
   .from("admin_financial_summary")
   .select("*");
 
-let totalRevenue = 0;
-let totalCollected = 0;
-let totalOutstanding = 0;
-let overdueCount = 0;
+if (sumErr) { alert(sumErr.message); throw sumErr; }
 
-summary.forEach(r=>{
+// Get plots with payment_status
+const { data: plots, error: pErr } = await supabase
+  .from("plots")
+  .select("id,plot,payment_status,total_price,status");
+
+if (pErr) { alert(pErr.message); throw pErr; }
+
+// Assignments to find owner user_id
+const { data: assigns, error: aErr } = await supabase
+  .from("plot_assignments")
+  .select("plot_id,user_id");
+
+if (aErr) { alert(aErr.message); throw aErr; }
+
+// Profiles (try to include email if you have it)
+const { data: profiles, error: prErr } = await supabase
+  .from("profiles")
+  .select("id,name,phone,email,role");
+
+if (prErr) { alert(prErr.message); throw prErr; }
+
+const profileById = new Map((profiles||[]).map(p => [p.id, p]));
+
+// Totals
+let totalRevenue = 0, totalCollected = 0, totalOutstanding = 0;
+(summary||[]).forEach(r=>{
   totalRevenue += Number(r.total_price||0);
   totalCollected += Number(r.total_paid||0);
   totalOutstanding += Number(r.balance||0);
 });
-
 document.getElementById("stRevenue").textContent = money(totalRevenue);
 document.getElementById("stCollected").textContent = money(totalCollected);
 document.getElementById("stOutstanding").textContent = money(totalOutstanding);
 
-// Fetch plots for status
-const { data: plots } = await supabase
-  .from("plots")
-  .select("id,plot,payment_status,total_price");
+// Build risk list
+let overdueCount = 0, delayedCount = 0, terminatedCount = 0;
 
-const overduePlots = [];
+const riskRows = (plots||[])
+  .filter(p => ["overdue","delayed","terminated"].includes(p.payment_status))
+  .map(p => {
+    if (p.payment_status === "overdue") overdueCount++;
+    if (p.payment_status === "delayed") delayedCount++;
+    if (p.payment_status === "terminated") terminatedCount++;
 
-for (const p of plots) {
-  if (p.payment_status === "overdue" || p.payment_status === "delayed") {
-    overdueCount++;
-    const summaryRow = summary.find(s=>s.plot_id === p.id);
-    overduePlots.push({
+    const asg = (assigns||[]).find(a => a.plot_id === p.id);
+    const owner = asg ? profileById.get(asg.user_id) : null;
+
+    // balance from summary view (if view groups by user_id it may have multiple rows; we take plot match and same user if available)
+    const sumRow = asg
+      ? (summary||[]).find(s => s.plot_id === p.id && s.user_id === asg.user_id)
+      : (summary||[]).find(s => s.plot_id === p.id);
+
+    return {
       plot: p.plot,
       status: p.payment_status,
-      balance: summaryRow?.balance || 0
-    });
-  }
-}
+      ownerName: owner?.name || (asg ? asg.user_id : "Unassigned"),
+      ownerEmail: owner?.email || "-",
+      ownerPhone: owner?.phone || "-",
+      balance: Number(sumRow?.balance ?? 0)
+    };
+  });
 
-document.getElementById("stOverdueCount").textContent = overdueCount;
+// Update cards
+document.getElementById("stOverdue").textContent = overdueCount;
+document.getElementById("stDelayed").textContent = delayedCount;
+document.getElementById("stTerminated").textContent = terminatedCount;
 
-const tbody = document.getElementById("overdueBody");
-tbody.innerHTML = overduePlots.map(p=>`
-  <tr class="${p.status}">
-    <td><strong>${p.plot}</strong></td>
-    <td><span class="badge ${p.status}">${p.status}</span></td>
-    <td class="right">${money(p.balance)}</td>
-  </tr>
-`).join("") || `<tr><td colspan="3">No overdue accounts 🎉</td></tr>`;
+// Render table
+const tbody = document.getElementById("riskBody");
+tbody.innerHTML = riskRows
+  .sort((a,b) => {
+    const order = { delayed: 1, overdue: 2, terminated: 3 };
+    return (order[a.status]||9) - (order[b.status]||9);
+  })
+  .map(r => `
+    <tr class="${r.status}">
+      <td><strong>${r.plot}</strong></td>
+      <td><span class="badge ${r.status}">${r.status}</span></td>
+      <td>${r.ownerName}</td>
+      <td>${r.ownerEmail}</td>
+      <td>${r.ownerPhone}</td>
+      <td class="right">${money(r.balance)}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="6">No overdue/delayed/terminated plots 🎉</td></tr>`;
 </script>
 </body>
 </html>
