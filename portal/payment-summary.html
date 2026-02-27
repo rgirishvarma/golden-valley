@@ -6,57 +6,57 @@
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sbBrand">
-        <div class="sbLogo">GV</div>
-        <div>
-          <div class="sbTitle">Golden Valley</div>
-          <div class="sbSub">Admin Portal</div>
-        </div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sbBrand">
+      <div class="sbLogo">GV</div>
+      <div>
+        <div class="sbTitle">Golden Valley</div>
+        <div class="sbSub">Admin Portal</div>
       </div>
+    </div>
 
-      <nav class="sbNav">
-        <a class="sbLink" href="index.html">Dashboard</a>
-        <a class="sbLink" href="plots.html">Plots</a>
-        <a class="sbLink" href="users.html">Users</a>
-        <a class="sbLink" href="payments.html">Payments</a>
-        <a class="sbLink active" href="payment-summary.html">Payment Summary</a>
-        <a class="sbLink" href="installment-plans.html">Installment Plans</a>
-      </nav>
+    <nav class="sbNav">
+      <a class="sbLink" href="index.html">Dashboard</a>
+      <a class="sbLink" href="plots.html">Plots</a>
+      <a class="sbLink" href="users.html">Users</a>
+      <a class="sbLink" href="payments.html">Payments</a>
+      <a class="sbLink active" href="payment-summary.html">Payment Summary</a>
+      <a class="sbLink" href="installment-plans.html">Installment Plans</a>
+    </nav>
 
-      <div class="sbFoot">
-        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+    <div class="sbFoot">
+      <button class="btn ghost" id="btnLogout">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="pageTop">
+      <h1>Payment Summary</h1>
+    </header>
+
+    <section class="card">
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Plot</th>
+              <th>Owner</th>
+              <th>Email</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th class="right">Total Price</th>
+              <th class="right">Total Paid</th>
+              <th class="right">Balance</th>
+              <th>Last Paid Date</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
-    </aside>
-
-    <main class="main">
-      <header class="pageTop">
-        <h1>Payment Summary</h1>
-        <div class="actions">
-          <button class="btn" id="btnExport">Export Excel</button>
-        </div>
-      </header>
-
-      <section class="card">
-        <div class="tableWrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Plot</th>
-                <th>User</th>
-                <th class="right">Total Price</th>
-                <th class="right">Total Paid</th>
-                <th class="right">Balance</th>
-                <th class="right">WhatsApp</th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
-  </div>
+    </section>
+  </main>
+</div>
 
 <script type="module">
 import { requireRole, wireLogout } from "./auth.js";
@@ -65,104 +65,75 @@ import { supabase } from "./db.js";
 await requireRole(["admin"]);
 wireLogout();
 
-function money(n){
-  return "₹" + Number(n||0).toLocaleString("en-IN");
-}
+function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-// Fetch summary view
-const { data: summary, error } = await supabase
-  .from("admin_financial_summary")
-  .select("*");
+// Refresh statuses
+await supabase.rpc("update_plot_payment_status");
 
-if (error) {
-  alert(error.message);
-  throw error;
-}
+// Get plots
+const { data: plots } = await supabase
+  .from("plots")
+  .select("id,plot,total_price,payment_status");
 
-// Fetch user profiles
-const { data: users } = await supabase
+// Assignments
+const { data: assigns } = await supabase
+  .from("plot_assignments")
+  .select("plot_id,user_id");
+
+// Profiles
+const { data: profiles } = await supabase
   .from("profiles")
-  .select("id,name,phone");
+  .select("id,name,phone,email");
 
-// Merge data
-const rows = summary.map(s => {
-  const user = users.find(u => u.id === s.user_id);
-  return {
-    plot: s.plot,
-    total: Number(s.total_price||0),
-    paid: Number(s.total_paid||0),
-    balance: Number(s.balance||0),
-    name: user?.name || "-",
-    phone: user?.phone || ""
-  };
+// Payments (to calculate total + last paid date)
+const { data: payments } = await supabase
+  .from("payments")
+  .select("plot_id,amount,pay_date");
+
+const profileById = new Map((profiles||[]).map(p => [p.id, p]));
+
+// Group payments by plot
+const paymentMap = {};
+(payments || []).forEach(p => {
+  if (!paymentMap[p.plot_id]) {
+    paymentMap[p.plot_id] = {
+      total: 0,
+      lastDate: null
+    };
+  }
+
+  paymentMap[p.plot_id].total += Number(p.amount || 0);
+
+  if (!paymentMap[p.plot_id].lastDate || 
+      new Date(p.pay_date) > new Date(paymentMap[p.plot_id].lastDate)) {
+    paymentMap[p.plot_id].lastDate = p.pay_date;
+  }
 });
 
-// Render table
 const tbody = document.getElementById("tbody");
 
-tbody.innerHTML = rows.map(r => `
-  <tr ${r.balance > 0 ? 'style="background:#fff8f8;"' : ''}>
-    <td><strong>${r.plot}</strong></td>
-    <td>
-      ${r.name}<br>
-      <small>${r.phone || ""}</small>
-    </td>
-    <td class="right">${money(r.total)}</td>
-    <td class="right">${money(r.paid)}</td>
-    <td class="right ${r.balance > 0 ? 'text-danger' : ''}">
-      ${money(r.balance)}
-    </td>
-    <td class="right">
-      ${r.phone && r.balance > 0 ? `
-        <button class="btn small ghost"
-          data-phone="${r.phone}"
-          data-plot="${r.plot}"
-          data-bal="${r.balance}">
-          WhatsApp
-        </button>
-      ` : "-"}
-    </td>
-  </tr>
-`).join("") || `<tr><td colspan="6">No data available</td></tr>`;
+tbody.innerHTML = (plots || []).map(pl => {
+  const asg = assigns.find(a => a.plot_id === pl.id);
+  const owner = asg ? profileById.get(asg.user_id) : null;
 
-// WhatsApp Reminder
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-phone]");
-  if (!btn) return;
+  const totalPaid = paymentMap[pl.id]?.total || 0;
+  const lastPaid = paymentMap[pl.id]?.lastDate || "-";
+  const balance = Math.max(Number(pl.total_price||0) - totalPaid, 0);
 
-  const phone = btn.dataset.phone.replace("+","");
-  const plot = btn.dataset.plot;
-  const bal = btn.dataset.bal;
-
-  const message = encodeURIComponent(
-`Golden Valley Payment Reminder
-
-Plot: ${plot}
-Remaining Balance: ₹${Number(bal).toLocaleString("en-IN")}
-
-Please complete your payment at the earliest.
-Thank you.`
-  );
-
-  window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
-});
-
-// Export to Excel (CSV)
-document.getElementById("btnExport").onclick = () => {
-  let csv = "Plot,User,Phone,Total Price,Total Paid,Balance\n";
-
-  rows.forEach(r=>{
-    csv += `"${r.plot}","${r.name}","${r.phone}",${r.total},${r.paid},${r.balance}\n`;
-  });
-
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "Payment_Summary.csv";
-  a.click();
-};
+  return `
+    <tr class="${pl.payment_status || 'active'}">
+      <td><strong>${pl.plot}</strong></td>
+      <td>${owner?.name || "Unassigned"}</td>
+      <td>${owner?.email || "-"}</td>
+      <td>${owner?.phone || "-"}</td>
+      <td><span class="badge ${pl.payment_status || 'active'}">${pl.payment_status || 'active'}</span></td>
+      <td class="right">${money(pl.total_price)}</td>
+      <td class="right">${money(totalPaid)}</td>
+      <td class="right">${money(balance)}</td>
+      <td>${lastPaid}</td>
+    </tr>
+  `;
+}).join("") || `<tr><td colspan="9">No data available</td></tr>`;
 </script>
 </body>
 </html>
