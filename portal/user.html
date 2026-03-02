@@ -2,76 +2,233 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>My Plots</title>
+  <title>Users</title>
   <link rel="stylesheet" href="portal.css" />
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <div class="sbBrand">
-        <div class="sbLogo">GV</div>
-        <div><div class="sbTitle">Golden Valley</div><div class="sbSub">User Portal</div></div>
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sbBrand">
+      <div class="sbLogo">GV</div>
+      <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
+    </div>
+
+    <nav class="sbNav">
+      <a class="sbLink" href="index.html">Dashboard</a>
+      <a class="sbLink" href="plots.html">Plots</a>
+      <a class="sbLink active" href="users.html">Users</a>
+      <a class="sbLink" href="payments.html">Payments</a>
+      <a class="sbLink" href="payment-summary.html">Payment Summary</a>
+      <a class="sbLink" href="installment-plans.html">Installment Plans</a>
+    </nav>
+
+    <div class="sbFoot">
+      <button class="btn ghost" id="btnLogout">Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="pageTop">
+      <h1>Users</h1>
+      <div class="actions">
+        <button class="btn" id="btnAdd">+ Add User</button>
       </div>
+    </header>
 
-      <nav class="sbNav">
-        <a class="sbLink" href="user-home.html">User Home</a>
-        <a class="sbLink" href="profile.html">Profile</a>
-        <a class="sbLink active" href="user.html">My Plots</a>
-        <a class="sbLink" href="my-payments.html">My Payments</a>
-        <a class="sbLink" href="installments.html">Installments</a>
-      </nav>
-
-      <div class="sbFoot">
-        <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
+    <section class="card">
+      <div class="tableWrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>User (Email)</th>
+              <th>User Name</th>
+              <th>Plot</th>
+              <th>Phone Number</th>
+              <th>Address</th>
+              <th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
       </div>
-    </aside>
+    </section>
+  </main>
+</div>
 
-    <main class="main">
-      <header class="pageTop">
-        <h1>My Plots</h1>
-      </header>
-
-      <section class="card">
-        <div class="tableWrap">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Plot</th>
-                <th>Status</th>
-                <th>Location</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
-        </div>
-      </section>
-    </main>
+<div class="modal hidden" id="modal">
+  <div class="modalBox">
+    <div class="modalTitle" id="mtitle">Modal</div>
+    <div id="mbody"></div>
+    <div class="modalActions">
+      <button class="btn ghost" id="mcancel">Cancel</button>
+      <button class="btn" id="mok">Save</button>
+    </div>
   </div>
+</div>
 
-  <script type="module">
-    import { requireRole, wireLogout } from "./auth.js";
-    import { listPlots } from "./db.js";
+<script type="module">
+import { requireRole, wireLogout } from "./auth.js";
+import { supabase } from "./db.js";
 
-    const { profile } = await requireRole(["user","admin"]);
-    wireLogout();
+await requireRole(["admin"]);
+wireLogout();
 
-    if (profile.role === "admin") {
-      window.location.href = "./index.html";
-    }
+const tbody = document.getElementById("tbody");
+const modal = document.getElementById("modal");
+const mtitle = document.getElementById("mtitle");
+const mbody = document.getElementById("mbody");
+const mcancel = document.getElementById("mcancel");
+const mok = document.getElementById("mok");
 
-    const plots = await listPlots();
-    const tbody = document.getElementById("tbody");
+function openModal(title, html, onSave){
+  mtitle.textContent = title;
+  mbody.innerHTML = html;
+  modal.classList.remove("hidden");
+  mok.onclick = async () => { await onSave(); modal.classList.add("hidden"); await refresh(); };
+  mcancel.onclick = () => modal.classList.add("hidden");
+}
 
-    tbody.innerHTML = plots.map(p => `
+let customers = [];
+let plots = [];
+let assignments = [];
+
+async function refresh(){
+  const [c, p, a] = await Promise.all([
+    supabase.from("customers").select("*").order("created_at", { ascending: false }),
+    supabase.from("plots").select("id,plot,status").order("plot"),
+    supabase.from("plot_assignments").select("plot_id,customer_id")
+  ]);
+
+  if (c.error) return alert(c.error.message);
+  if (p.error) return alert(p.error.message);
+  if (a.error) return alert(a.error.message);
+
+  customers = c.data || [];
+  plots = p.data || [];
+  assignments = a.data || [];
+
+  tbody.innerHTML = customers.map(u => {
+    const asg = assignments.find(x => x.customer_id === u.id);
+    const plot = asg ? plots.find(p => p.id === asg.plot_id) : null;
+
+    return `
       <tr>
-        <td><strong>${p.plot}</strong></td>
-        <td>${p.status}</td>
-        <td>${p.location || "-"}</td>
-        <td>${p.notes || "-"}</td>
+        <td>${u.user_email}</td>
+        <td><strong>${u.user_name}</strong></td>
+        <td>${plot ? `<strong>${plot.plot}</strong>` : `<em>Not Assigned</em>`}</td>
+        <td>${u.phone || "-"}</td>
+        <td>${u.address || "-"}</td>
+        <td class="right">
+          <button class="btn small ghost" data-assign="${u.id}">Assign Plot</button>
+          <button class="btn small ghost" data-unassign="${u.id}">Unassign</button>
+          <button class="btn small ghost" data-edit="${u.id}">Edit</button>
+          <button class="btn small ghost" data-del="${u.id}">Delete</button>
+        </td>
       </tr>
-    `).join("");
-  </script>
+    `;
+  }).join("") || `<tr><td colspan="6">No users</td></tr>`;
+}
+
+document.getElementById("btnAdd").onclick = () => {
+  openModal("Add User", `
+    <div class="field"><label>User (Email)</label><input id="email" type="email" placeholder="a1@goldenvalley.com" /></div>
+    <div class="field"><label>User Name</label><input id="name" placeholder="Customer Name" /></div>
+    <div class="field"><label>Phone Number</label><input id="phone" placeholder="98765xxxxx" /></div>
+    <div class="field"><label>Address</label><input id="addr" placeholder="Address" /></div>
+  `, async () => {
+    const row = {
+      user_email: document.getElementById("email").value.trim().toLowerCase(),
+      user_name: document.getElementById("name").value.trim(),
+      phone: document.getElementById("phone").value.trim(),
+      address: document.getElementById("addr").value.trim()
+    };
+    if (!row.user_email) return alert("Enter email");
+    if (!row.user_name) return alert("Enter name");
+
+    const r = await supabase.from("customers").insert(row);
+    if (r.error) return alert(r.error.message);
+  });
+};
+
+function plotOptions(){
+  return plots.map(p => `<option value="${p.id}">${p.plot}</option>`).join("");
+}
+
+document.addEventListener("click", async (e) => {
+  const editBtn = e.target.closest("button[data-edit]");
+  const delBtn = e.target.closest("button[data-del]");
+  const asBtn = e.target.closest("button[data-assign]");
+  const unBtn = e.target.closest("button[data-unassign]");
+
+  if (editBtn){
+    const id = editBtn.dataset.edit;
+    const u = customers.find(x => x.id === id);
+    if (!u) return;
+
+    openModal("Edit User", `
+      <div class="field"><label>User (Email)</label><input id="email" type="email" value="${u.user_email}" /></div>
+      <div class="field"><label>User Name</label><input id="name" value="${u.user_name}" /></div>
+      <div class="field"><label>Phone Number</label><input id="phone" value="${u.phone || ""}" /></div>
+      <div class="field"><label>Address</label><input id="addr" value="${u.address || ""}" /></div>
+    `, async () => {
+      const upd = {
+        user_email: document.getElementById("email").value.trim().toLowerCase(),
+        user_name: document.getElementById("name").value.trim(),
+        phone: document.getElementById("phone").value.trim(),
+        address: document.getElementById("addr").value.trim()
+      };
+      if (!upd.user_email) return alert("Enter email");
+      if (!upd.user_name) return alert("Enter name");
+
+      const r = await supabase.from("customers").update(upd).eq("id", id);
+      if (r.error) return alert(r.error.message);
+    });
+  }
+
+  if (delBtn){
+    const id = delBtn.dataset.del;
+    if (!confirm("Delete this user?")) return;
+
+    // remove assignment first
+    await supabase.from("plot_assignments").delete().eq("customer_id", id);
+
+    const r = await supabase.from("customers").delete().eq("id", id);
+    if (r.error) return alert(r.error.message);
+    await refresh();
+  }
+
+  if (asBtn){
+    const customer_id = asBtn.dataset.assign;
+
+    openModal("Assign Plot", `
+      <div class="field">
+        <label>Select Plot</label>
+        <select id="plot_id">${plotOptions()}</select>
+      </div>
+    `, async () => {
+      const plot_id = document.getElementById("plot_id").value;
+
+      // one plot -> one customer (remove old assignment for that plot)
+      await supabase.from("plot_assignments").delete().eq("plot_id", plot_id);
+
+      // one customer -> one plot (remove old assignment for that customer)
+      await supabase.from("plot_assignments").delete().eq("customer_id", customer_id);
+
+      const r = await supabase.from("plot_assignments").insert({ plot_id, customer_id });
+      if (r.error) return alert(r.error.message);
+    });
+  }
+
+  if (unBtn){
+    const customer_id = unBtn.dataset.unassign;
+    if (!confirm("Unassign plot for this user?")) return;
+    const r = await supabase.from("plot_assignments").delete().eq("customer_id", customer_id);
+    if (r.error) return alert(r.error.message);
+    await refresh();
+  }
+});
+
+await refresh();
+</script>
 </body>
 </html>
-
