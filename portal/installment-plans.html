@@ -12,6 +12,7 @@
         <div class="sbLogo">GV</div>
         <div><div class="sbTitle">Golden Valley</div><div class="sbSub">Admin Portal</div></div>
       </div>
+
       <nav class="sbNav">
         <a class="sbLink" href="index.html">Dashboard</a>
         <a class="sbLink" href="plots.html">Plots</a>
@@ -20,6 +21,7 @@
         <a class="sbLink" href="payment-summary.html">Payment Summary</a>
         <a class="sbLink active" href="installment-plans.html">Installment Plans</a>
       </nav>
+
       <div class="sbFoot">
         <button class="btn ghost" id="btnLogout" style="width:100%;">Logout</button>
       </div>
@@ -38,7 +40,8 @@
           <table class="table">
             <thead>
               <tr>
-                <th>User</th>
+                <th>Customer</th>
+                <th>Email</th>
                 <th>Phone</th>
                 <th>Plot</th>
                 <th>Start</th>
@@ -69,7 +72,6 @@
   <script type="module">
     import { requireRole, wireLogout } from "./auth.js";
     import { supabase } from "./db.js";
-    import { listInstallmentPlans, upsertInstallmentPlan, deleteInstallmentPlan } from "./db.js";
 
     await requireRole(["admin"]);
     wireLogout();
@@ -91,35 +93,40 @@
       mcancel.onclick = () => modal.classList.add("hidden");
     }
 
-    // Load data
-    let users = [];
+    let customers = [];
     let plots = [];
     let assignments = [];
     let plans = [];
 
-    async function loadAll(){
-      const u = await supabase.from("profiles").select("id,name,phone,role").order("name");
-      const p = await supabase.from("plots").select("id,plot,total_price").order("plot");
-      const a = await supabase.from("plot_assignments").select("user_id,plot_id");
-      if (u.error) throw u.error;
+    async function refresh(){
+      const [c, p, a, ip] = await Promise.all([
+        supabase.from("customers").select("id,user_name,user_email,phone").order("user_name"),
+        supabase.from("plots").select("id,plot,total_price").order("plot"),
+        supabase.from("plot_assignments").select("plot_id,customer_id"),
+        supabase.from("installment_plans").select("*").order("start_date", { ascending:false })
+      ]);
+
+      if (c.error) throw c.error;
       if (p.error) throw p.error;
       if (a.error) throw a.error;
-      users = u.data || [];
+      if (ip.error) throw ip.error;
+
+      customers = c.data || [];
       plots = p.data || [];
       assignments = a.data || [];
-    }
+      plans = ip.data || [];
 
-    async function refresh(){
-      await loadAll();
-      plans = await listInstallmentPlans();
+      const custById = new Map(customers.map(x=>[x.id,x]));
+      const plotById = new Map(plots.map(x=>[x.id,x]));
 
       tbody.innerHTML = plans.map(pl => {
-        const user = users.find(x=>x.id===pl.user_id);
-        const plot = plots.find(x=>x.id===pl.plot_id);
+        const cust = custById.get(pl.customer_id);
+        const plot = plotById.get(pl.plot_id);
         return `
           <tr>
-            <td>${user?.name || "-"}</td>
-            <td>${user?.phone || "-"}</td>
+            <td>${cust?.user_name || "-"}</td>
+            <td>${cust?.user_email || "-"}</td>
+            <td>${cust?.phone || "-"}</td>
             <td><strong>${plot?.plot || "-"}</strong></td>
             <td>${pl.start_date}</td>
             <td>${pl.frequency}</td>
@@ -130,36 +137,35 @@
             </td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="8">No plans.</td></tr>`;
+      }).join("") || `<tr><td colspan="9">No plans.</td></tr>`;
     }
 
-    function userOptions(){
-      return users
-        .filter(u=>u.role !== "admin")
-        .map(u=>`<option value="${u.id}">${u.name||u.id} • ${u.phone||""}</option>`)
-        .join("");
+    function customerOptions(){
+      return customers.map(c => `
+        <option value="${c.id}">${c.user_name} • ${c.user_email}</option>
+      `).join("");
     }
 
-    function plotsAssignedToUser(userId){
-      const assignedPlotIds = assignments.filter(a=>a.user_id===userId).map(a=>a.plot_id);
-      return plots.filter(p=>assignedPlotIds.includes(p.id));
+    function plotsAssignedToCustomer(customerId){
+      const plotIds = assignments.filter(a => a.customer_id === customerId).map(a => a.plot_id);
+      return plots.filter(p => plotIds.includes(p.id));
     }
 
-    function plotOptionsForUser(userId){
-      const list = plotsAssignedToUser(userId);
+    function plotOptionsForCustomer(customerId){
+      const list = plotsAssignedToCustomer(customerId);
       if (!list.length) return `<option value="">No assigned plots</option>`;
       return list.map(p=>`<option value="${p.id}">${p.plot}</option>`).join("");
     }
 
     document.getElementById("btnAdd").onclick = () => {
       openModal("Add / Update Plan", `
-        <div class="field"><label>User</label>
-          <select id="u">${userOptions()}</select>
+        <div class="field"><label>Customer</label>
+          <select id="c">${customerOptions()}</select>
         </div>
 
         <div class="field"><label>Assigned Plot</label>
           <select id="p"></select>
-          <div class="help" style="font-size:12px;color:#666;">Only plots assigned to selected user are shown.</div>
+          <div class="help" style="font-size:12px;color:#666;">Only plots assigned to selected customer are shown.</div>
         </div>
 
         <div class="field"><label>Start Date</label><input id="d" type="date" /></div>
@@ -167,49 +173,59 @@
         <div class="field"><label>Frequency</label>
           <select id="f">
             <option value="monthly">monthly</option>
-            <option value="weekly">weekly</option>
           </select>
         </div>
 
         <div class="field"><label>Installments Count</label>
-          <input id="c" type="number" min="1" value="40" />
-          <div class="help" style="font-size:12px;color:#666;">Set 40 months. Remaining will be final month (41) in user schedule.</div>
+          <input id="count" type="number" min="1" value="40" />
+          <div class="help" style="font-size:12px;color:#666;">40 months; your final remaining can be handled in schedule display if needed.</div>
         </div>
 
-        <div class="field"><label>Installment Amount (₹)</label><input id="a" type="number" min="1" /></div>
+        <div class="field"><label>Monthly Amount (₹)</label>
+          <input id="amt" type="number" min="1" />
+        </div>
       `, async () => {
-        const user_id = document.getElementById("u").value;
+        const customer_id = document.getElementById("c").value;
         const plot_id = document.getElementById("p").value;
         const start_date = document.getElementById("d").value;
         const frequency = document.getElementById("f").value;
-        const installments_count = Number(document.getElementById("c").value||0);
-        const installment_amount = Number(document.getElementById("a").value||0);
+        const installments_count = Number(document.getElementById("count").value||0);
+        const installment_amount = Number(document.getElementById("amt").value||0);
 
-        if (!user_id) return alert("Select user");
-        if (!plot_id) return alert("No plot selected (user has no assigned plot)");
+        if (!customer_id) return alert("Select customer");
+        if (!plot_id) return alert("No plot selected (customer has no assigned plot)");
         if (!start_date) return alert("Pick start date");
         if (!(installments_count>0)) return alert("Enter count");
         if (!(installment_amount>0)) return alert("Enter amount");
 
-        await upsertInstallmentPlan({ user_id, plot_id, start_date, frequency, installments_count, installment_amount });
+        // upsert plan (if your table has a unique constraint on customer_id+plot_id, this will behave like update)
+        const res = await supabase.from("installment_plans").upsert([{
+          customer_id, plot_id, start_date, frequency, installments_count, installment_amount
+        }], { onConflict: "customer_id,plot_id" });
+
+        if (res.error) return alert(res.error.message);
+
+        await supabase.rpc("update_plot_payment_status");
       });
 
-      // after modal open, wire dependent dropdown
-      const userSel = document.getElementById("u");
+      const custSel = document.getElementById("c");
       const plotSel = document.getElementById("p");
-
       const refreshPlots = () => {
-        plotSel.innerHTML = plotOptionsForUser(userSel.value);
+        plotSel.innerHTML = plotOptionsForCustomer(custSel.value);
       };
-      userSel.addEventListener("change", refreshPlots);
-      refreshPlots(); // initial
+      custSel.addEventListener("change", refreshPlots);
+      refreshPlots();
     };
 
     document.addEventListener("click", async (e) => {
       const b = e.target.closest("button[data-del]");
       if (!b) return;
       if (!confirm("Delete plan?")) return;
-      await deleteInstallmentPlan(b.dataset.del);
+
+      const res = await supabase.from("installment_plans").delete().eq("id", b.dataset.del);
+      if (res.error) return alert(res.error.message);
+
+      await supabase.rpc("update_plot_payment_status");
       await refresh();
     });
 
