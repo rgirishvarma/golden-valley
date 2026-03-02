@@ -33,6 +33,9 @@
   <main class="main">
     <header class="pageTop">
       <h1>Payment Summary</h1>
+      <div class="actions">
+        <button class="btn" id="btnExport">Export Excel</button>
+      </div>
     </header>
 
     <section class="card">
@@ -41,7 +44,7 @@
           <thead>
             <tr>
               <th>Plot</th>
-              <th>Owner</th>
+              <th>Customer</th>
               <th>Email</th>
               <th>Phone</th>
               <th>Status</th>
@@ -49,6 +52,7 @@
               <th class="right">Total Paid</th>
               <th class="right">Balance</th>
               <th>Last Paid Date</th>
+              <th class="right">WhatsApp</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -67,73 +71,111 @@ wireLogout();
 
 function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-// Refresh statuses
+// refresh status
 await supabase.rpc("update_plot_payment_status");
 
-// Get plots
-const { data: plots } = await supabase
+// view
+const { data: summary, error: sumErr } = await supabase
+  .from("admin_financial_summary")
+  .select("*");
+if (sumErr) { alert(sumErr.message); throw sumErr; }
+
+// plots (for payment_status)
+const { data: plots, error: pErr } = await supabase
   .from("plots")
-  .select("id,plot,total_price,payment_status");
+  .select("id,plot,payment_status")
+  .order("plot");
+if (pErr) { alert(pErr.message); throw pErr; }
 
-// Assignments
-const { data: assigns } = await supabase
-  .from("plot_assignments")
-  .select("plot_id,user_id");
+const plotById = new Map((plots||[]).map(p => [p.id, p]));
 
-// Profiles
-const { data: profiles } = await supabase
-  .from("profiles")
-  .select("id,name,phone,email");
+// customers
+const { data: customers, error: cErr } = await supabase
+  .from("customers")
+  .select("id,user_name,user_email,phone,address");
+if (cErr) { alert(cErr.message); throw cErr; }
 
-// Payments (to calculate total + last paid date)
-const { data: payments } = await supabase
-  .from("payments")
-  .select("plot_id,amount,pay_date");
+const custById = new Map((customers||[]).map(c => [c.id, c]));
 
-const profileById = new Map((profiles||[]).map(p => [p.id, p]));
+const rows = (summary||[]).map(s => {
+  const pl = plotById.get(s.plot_id);
+  const ps = pl?.payment_status || "active";
+  const c = s.customer_id ? custById.get(s.customer_id) : null;
 
-// Group payments by plot
-const paymentMap = {};
-(payments || []).forEach(p => {
-  if (!paymentMap[p.plot_id]) {
-    paymentMap[p.plot_id] = {
-      total: 0,
-      lastDate: null
-    };
-  }
-
-  paymentMap[p.plot_id].total += Number(p.amount || 0);
-
-  if (!paymentMap[p.plot_id].lastDate || 
-      new Date(p.pay_date) > new Date(paymentMap[p.plot_id].lastDate)) {
-    paymentMap[p.plot_id].lastDate = p.pay_date;
-  }
+  return {
+    plot: s.plot,
+    payment_status: ps,
+    customer: c?.user_name || "Unassigned",
+    email: c?.user_email || "-",
+    phone: c?.phone || "-",
+    total: Number(s.total_price||0),
+    paid: Number(s.total_paid||0),
+    balance: Number(s.balance||0),
+    lastPaid: s.last_paid_date || "-"
+  };
 });
 
 const tbody = document.getElementById("tbody");
+tbody.innerHTML = rows.map(r => `
+  <tr class="${r.payment_status}">
+    <td><strong>${r.plot}</strong></td>
+    <td>${r.customer}</td>
+    <td>${r.email}</td>
+    <td>${r.phone}</td>
+    <td><span class="badge ${r.payment_status}">${r.payment_status}</span></td>
+    <td class="right">${money(r.total)}</td>
+    <td class="right">${money(r.paid)}</td>
+    <td class="right">${money(r.balance)}</td>
+    <td>${r.lastPaid}</td>
+    <td class="right">
+      ${r.phone && r.balance > 0 ? `
+        <button class="btn small ghost"
+          data-phone="${r.phone}"
+          data-plot="${r.plot}"
+          data-bal="${r.balance}">
+          WhatsApp
+        </button>
+      ` : "-"}
+    </td>
+  </tr>
+`).join("") || `<tr><td colspan="10">No data</td></tr>`;
 
-tbody.innerHTML = (plots || []).map(pl => {
-  const asg = assigns.find(a => a.plot_id === pl.id);
-  const owner = asg ? profileById.get(asg.user_id) : null;
+// WhatsApp
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-phone]");
+  if (!btn) return;
 
-  const totalPaid = paymentMap[pl.id]?.total || 0;
-  const lastPaid = paymentMap[pl.id]?.lastDate || "-";
-  const balance = Math.max(Number(pl.total_price||0) - totalPaid, 0);
+  const phone = btn.dataset.phone.replace("+","");
+  const plot = btn.dataset.plot;
+  const bal = btn.dataset.bal;
 
-  return `
-    <tr class="${pl.payment_status || 'active'}">
-      <td><strong>${pl.plot}</strong></td>
-      <td>${owner?.name || "Unassigned"}</td>
-      <td>${owner?.email || "-"}</td>
-      <td>${owner?.phone || "-"}</td>
-      <td><span class="badge ${pl.payment_status || 'active'}">${pl.payment_status || 'active'}</span></td>
-      <td class="right">${money(pl.total_price)}</td>
-      <td class="right">${money(totalPaid)}</td>
-      <td class="right">${money(balance)}</td>
-      <td>${lastPaid}</td>
-    </tr>
-  `;
-}).join("") || `<tr><td colspan="9">No data available</td></tr>`;
+  const message = encodeURIComponent(
+`Golden Valley Payment Reminder
+
+Plot: ${plot}
+Remaining Balance: ₹${Number(bal).toLocaleString("en-IN")}
+
+Please complete your payment.
+Thank you.`
+  );
+
+  window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+});
+
+// Export CSV (Excel)
+document.getElementById("btnExport").onclick = () => {
+  let csv = "Plot,Customer,Email,Phone,Payment Status,Total Price,Total Paid,Balance,Last Paid Date\n";
+  rows.forEach(r=>{
+    csv += `"${r.plot}","${r.customer}","${r.email}","${r.phone}","${r.payment_status}",${r.total},${r.paid},${r.balance},"${r.lastPaid}"\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Payment_Summary.csv";
+  a.click();
+};
 </script>
 </body>
 </html>
