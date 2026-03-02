@@ -73,10 +73,11 @@
             <tr>
               <th>Plot</th>
               <th>Payment Status</th>
-              <th>Owner</th>
+              <th>Customer</th>
               <th>Email</th>
               <th>Phone</th>
               <th class="right">Balance</th>
+              <th>Last Paid</th>
             </tr>
           </thead>
           <tbody id="riskBody"></tbody>
@@ -99,40 +100,37 @@ wireLogout();
 
 function money(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
 
-// ✅ Refresh payment statuses when dashboard loads
+// refresh status on dashboard load
 await supabase.rpc("update_plot_payment_status");
 
-// Summary view (has plot_id, plot, total_price, total_paid, balance, user_id maybe)
+// view summary
 const { data: summary, error: sumErr } = await supabase
   .from("admin_financial_summary")
   .select("*");
-
 if (sumErr) { alert(sumErr.message); throw sumErr; }
 
-// Get plots with payment_status
+// plots
 const { data: plots, error: pErr } = await supabase
   .from("plots")
-  .select("id,plot,payment_status,total_price,status");
-
+  .select("id,plot,payment_status,total_price,status")
+  .order("plot");
 if (pErr) { alert(pErr.message); throw pErr; }
 
-// Assignments to find owner user_id
+// assignments (customer ownership)
 const { data: assigns, error: aErr } = await supabase
   .from("plot_assignments")
-  .select("plot_id,user_id");
-
+  .select("plot_id,customer_id");
 if (aErr) { alert(aErr.message); throw aErr; }
 
-// Profiles (try to include email if you have it)
-const { data: profiles, error: prErr } = await supabase
-  .from("profiles")
-  .select("id,name,phone,email,role");
+// customers
+const { data: customers, error: cErr } = await supabase
+  .from("customers")
+  .select("id,user_email,user_name,phone,address");
+if (cErr) { alert(cErr.message); throw cErr; }
 
-if (prErr) { alert(prErr.message); throw prErr; }
+const custById = new Map((customers||[]).map(c => [c.id, c]));
 
-const profileById = new Map((profiles||[]).map(p => [p.id, p]));
-
-// Totals
+// totals
 let totalRevenue = 0, totalCollected = 0, totalOutstanding = 0;
 (summary||[]).forEach(r=>{
   totalRevenue += Number(r.total_price||0);
@@ -143,7 +141,7 @@ document.getElementById("stRevenue").textContent = money(totalRevenue);
 document.getElementById("stCollected").textContent = money(totalCollected);
 document.getElementById("stOutstanding").textContent = money(totalOutstanding);
 
-// Build risk list
+// risk rows
 let overdueCount = 0, delayedCount = 0, terminatedCount = 0;
 
 const riskRows = (plots||[])
@@ -154,45 +152,43 @@ const riskRows = (plots||[])
     if (p.payment_status === "terminated") terminatedCount++;
 
     const asg = (assigns||[]).find(a => a.plot_id === p.id);
-    const owner = asg ? profileById.get(asg.user_id) : null;
+    const cust = asg ? custById.get(asg.customer_id) : null;
 
-    // balance from summary view (if view groups by user_id it may have multiple rows; we take plot match and same user if available)
     const sumRow = asg
-      ? (summary||[]).find(s => s.plot_id === p.id && s.user_id === asg.user_id)
+      ? (summary||[]).find(s => s.plot_id === p.id && s.customer_id === asg.customer_id)
       : (summary||[]).find(s => s.plot_id === p.id);
 
     return {
       plot: p.plot,
       status: p.payment_status,
-      ownerName: owner?.name || (asg ? asg.user_id : "Unassigned"),
-      ownerEmail: owner?.email || "-",
-      ownerPhone: owner?.phone || "-",
-      balance: Number(sumRow?.balance ?? 0)
+      custName: cust?.user_name || "Unassigned",
+      custEmail: cust?.user_email || "-",
+      custPhone: cust?.phone || "-",
+      balance: Number(sumRow?.balance ?? 0),
+      lastPaid: sumRow?.last_paid_date || "-"
     };
+  })
+  .sort((a,b) => {
+    const order = { terminated: 1, delayed: 2, overdue: 3 };
+    return (order[a.status]||9) - (order[b.status]||9);
   });
 
-// Update cards
 document.getElementById("stOverdue").textContent = overdueCount;
 document.getElementById("stDelayed").textContent = delayedCount;
 document.getElementById("stTerminated").textContent = terminatedCount;
 
-// Render table
 const tbody = document.getElementById("riskBody");
-tbody.innerHTML = riskRows
-  .sort((a,b) => {
-    const order = { delayed: 1, overdue: 2, terminated: 3 };
-    return (order[a.status]||9) - (order[b.status]||9);
-  })
-  .map(r => `
-    <tr class="${r.status}">
-      <td><strong>${r.plot}</strong></td>
-      <td><span class="badge ${r.status}">${r.status}</span></td>
-      <td>${r.ownerName}</td>
-      <td>${r.ownerEmail}</td>
-      <td>${r.ownerPhone}</td>
-      <td class="right">${money(r.balance)}</td>
-    </tr>
-  `).join("") || `<tr><td colspan="6">No overdue/delayed/terminated plots 🎉</td></tr>`;
+tbody.innerHTML = riskRows.map(r => `
+  <tr class="${r.status}">
+    <td><strong>${r.plot}</strong></td>
+    <td><span class="badge ${r.status}">${r.status}</span></td>
+    <td>${r.custName}</td>
+    <td>${r.custEmail}</td>
+    <td>${r.custPhone}</td>
+    <td class="right">${money(r.balance)}</td>
+    <td>${r.lastPaid}</td>
+  </tr>
+`).join("") || `<tr><td colspan="7">No overdue/delayed/terminated plots 🎉</td></tr>`;
 </script>
 </body>
 </html>
