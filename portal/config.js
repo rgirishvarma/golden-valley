@@ -1,3 +1,0 @@
-// portal/config.js
-export const SUPABASE_URL = "https://zqligiqkvhssrnbelmkc.supabase.co";
-export const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxbGlnaXFrdmhzc3JuYmVsbWtjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4NzcyODYsImV4cCI6MjA4NzQ1MzI4Nn0.BeKnfk0HKPxbuBXcGKGZS2q-Wcrb1aTLFAZAxhe_vRE";
